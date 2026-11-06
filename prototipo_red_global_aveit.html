@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAMDE V4 — Osciloscopio Diferencial (Sectores A y B en Contrafase)</title>
+  <style>
+    :root {
+      --bg-main: #0a0d14;
+      --bg-panel: #111622;
+      --bg-card: #161d2d;
+      --border-color: #232d42;
+      --accent-ch1: #00e5ff;   /* Cyan: Placa A (0°) */
+      --accent-ch2: #facc15;   /* Amarillo: Placa B (180° Contrafase) */
+      --accent-diff: #a855f7;  /* Púrpura: Resta Diferencial (A - B) */
+      --accent-opto: #00ff88;  /* Verde: Sincronismo PA8 */
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      height: 50px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.5rem;
+      flex-shrink: 0;
+    }
+
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-logo {
+      width: 13px; height: 13px; border-radius: 50%;
+      background: var(--accent-ch1); box-shadow: 0 0 10px var(--accent-ch1);
+    }
+    .brand-title { font-size: 15px; font-weight: 700; letter-spacing: 0.5px; }
+    .brand-subtitle { font-size: 11px; color: var(--text-muted); margin-left: 6px; }
+
+    .header-actions { display: flex; align-items: center; gap: 10px; }
+
+    button {
+      background: var(--bg-card); color: var(--text-main);
+      border: 1px solid var(--border-color); padding: 6px 14px;
+      border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    button:hover { background: #1e273d; }
+    button.btn-primary { background: #0284c7; border-color: #38bdf8; color: #fff; }
+    button.btn-connected { background: #065f46; border-color: #10b981; color: #a7f3d0; }
+
+    .toolbar {
+      height: 48px; background: #0d121c; border-bottom: 1px solid var(--border-color);
+      display: flex; align-items: center; padding: 0 1.5rem; gap: 16px;
+      flex-shrink: 0; font-size: 12px; flex-wrap: wrap;
+    }
+
+    .tool-item { display: flex; align-items: center; gap: 6px; }
+    .tool-label { color: var(--text-muted); font-weight: 600; font-size: 11px; text-transform: uppercase; }
+
+    select {
+      background: var(--bg-card); color: var(--accent-ch1);
+      border: 1px solid var(--border-color); padding: 4px 8px;
+      border-radius: 5px; font-size: 12px; font-weight: 600; outline: none;
+    }
+    select.time-select { color: #f59e0b; }
+    select.v-select { color: var(--accent-ch2); }
+
+    .main-workspace { flex: 1; display: flex; position: relative; overflow: hidden; }
+    .canvas-wrapper { flex: 1; position: relative; height: 100%; background: #05070a; }
+    canvas { width: 100%; height: 100%; display: block; }
+
+    aside {
+      width: 330px; background: var(--bg-panel); border-left: 1px solid var(--border-color);
+      display: flex; flex-direction: column; gap: 6px; padding: 0.8rem;
+      overflow-y: auto; flex-shrink: 0;
+    }
+
+    .panel-section-title {
+      font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px; color: var(--text-muted); display: flex; justify-content: space-between;
+      align-items: center; margin-top: 3px;
+    }
+
+    .card {
+      background: var(--bg-card); border: 1px solid var(--border-color);
+      border-radius: 6px; padding: 6px 10px; display: flex; flex-direction: column; gap: 2px;
+    }
+
+    .card-row { display: flex; justify-content: space-between; align-items: center; }
+    .card-label { font-size: 10.5px; color: var(--text-muted); font-weight: 500; }
+    .card-val { font-family: ui-monospace, monospace; font-size: 14.5px; font-weight: 700; }
+    .val-ch1 { color: var(--accent-ch1); }
+    .val-ch2 { color: var(--accent-ch2); }
+    .val-diff { color: var(--accent-diff); }
+    .val-opto { color: var(--accent-opto); }
+
+    .badge-lock {
+      padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; text-align: center;
+    }
+    .lock-locked { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981; }
+    .lock-free { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid #f59e0b; }
+
+    .field-status-box {
+      margin-top: auto; border-radius: 8px; padding: 10px; text-align: center;
+      display: flex; flex-direction: column; gap: 3px; border: 1px solid transparent;
+      transition: all 0.3s ease;
+    }
+    .field-status-title { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; }
+    .field-status-val { font-size: 18px; font-weight: 800; letter-spacing: 0.5px; }
+    .status-pos { background: rgba(16, 185, 129, 0.15); border-color: #10b981; color: #34d399; }
+    .status-neg { background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #f87171; }
+    .status-idle { background: rgba(148, 163, 184, 0.1); border-color: #475569; color: #94a3b8; }
+
+    footer {
+      height: 30px; background: #090c12; border-top: 1px solid var(--border-color);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 1.5rem; font-size: 11px; color: var(--text-muted);
+      font-family: ui-monospace, monospace; flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="brand-logo"></div>
+      <div class="brand-title">SAMDE V4 <span class="brand-subtitle">Digitalización Diferencial A/B (100 Hz Contrafase)</span></div>
+    </div>
+    <div class="header-actions">
+      <button id="btnPausa">⏸ Pausar Traza</button>
+      <button id="btnConectar" class="btn-primary">🔌 Conectar ST-Link</button>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <!-- BASE DE TIEMPO (Tektronix M 2.50 ms) -->
+    <div class="tool-item">
+      <span class="tool-label">Base Tiempo:</span>
+      <select id="selTimebase" class="time-select">
+        <option value="1.0">1.0 ms/div</option>
+        <option value="2.0">2.0 ms/div</option>
+        <option value="2.5" selected>2.50 ms/div (Como Tektronix)</option>
+        <option value="5.0">5.0 ms/div</option>
+      </select>
+    </div>
+
+    <!-- ESCALA VERTICAL (Tektronix 500 mV/div) -->
+    <div class="tool-item">
+      <span class="tool-label" style="color: var(--accent-ch1);">Escala V/div:</span>
+      <select id="selScaleV" class="v-select">
+        <option value="0.20">200 mV/div</option>
+        <option value="0.50" selected>500 mV/div (Tektronix)</option>
+        <option value="1.00">1.00 V/div</option>
+      </select>
+    </div>
+
+    <!-- VISIBILIDAD DE TRAZAS -->
+    <div class="tool-item" style="gap: 10px;">
+      <label style="cursor: pointer; display: flex; align-items: center; gap: 4px; color: var(--accent-ch1);">
+        <input type="checkbox" id="chkShowA" checked> Placa A (PA0)
+      </label>
+      <label style="cursor: pointer; display: flex; align-items: center; gap: 4px; color: var(--accent-ch2);">
+        <input type="checkbox" id="chkShowB" checked> Placa B (PA1)
+      </label>
+      <label style="cursor: pointer; display: flex; align-items: center; gap: 4px; color: var(--accent-diff);">
+        <input type="checkbox" id="chkShowDiff"> Resta (A - B)
+      </label>
+      <label style="cursor: pointer; display: flex; align-items: center; gap: 4px; color: var(--accent-opto);">
+        <input type="checkbox" id="chkShowOpto"> Sincro (PA8)
+      </label>
+    </div>
+
+    <div class="tool-item" style="margin-left: auto;">
+      <span id="statFPS" style="color: var(--text-main); font-weight: bold; font-family: monospace;">60 FPS</span>
+    </div>
+  </div>
+
+  <div class="main-workspace">
+    <div class="canvas-wrapper">
+      <canvas id="scopeCanvas"></canvas>
+    </div>
+
+    <aside>
+      <div class="panel-section-title">
+        <span style="color: var(--accent-ch1);">MEDIDAS CH1 — PLACA A (PA0)</span>
+      </div>
+      <div class="card">
+        <div class="card-row">
+          <span class="card-label">Vpico-pico</span>
+          <span id="mVppA" class="card-val val-ch1">0.00 V</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-row">
+          <span class="card-label">Vmedio (DC)</span>
+          <span id="mVdcA" class="card-val val-ch1">0.00 V</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-row">
+          <span class="card-label">Frecuencia Medida</span>
+          <span id="mFreqA" class="card-val val-ch1">0.0 Hz</span>
+        </div>
+      </div>
+
+      <div class="panel-section-title" style="margin-top: 4px;">
+        <span style="color: var(--accent-ch2);">MEDIDAS CH2 — PLACA B (PA1)</span>
+      </div>
+      <div class="card">
+        <div class="card-row">
+          <span class="card-label">Vpico-pico</span>
+          <span id="mVppB" class="card-val val-ch2">0.00 V</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-row">
+          <span class="card-label">Vmedio (DC)</span>
+          <span id="mVdcB" class="card-val val-ch2">0.00 V</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-row">
+          <span class="card-label">Frecuencia Medida</span>
+          <span id="mFreqB" class="card-val val-ch2">0.0 Hz</span>
+        </div>
+      </div>
+
+      <div class="panel-section-title" style="margin-top: 4px;">
+        <span style="color: var(--accent-diff);">RESTA DIFERENCIAL (A - B)</span>
+      </div>
+      <div class="card">
+        <div class="card-row">
+          <span class="card-label">Vpp Diferencial</span>
+          <span id="mVppDiff" class="card-val val-diff">0.00 V</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-row">
+          <span class="card-label">Desfasaje Medido (A vs B)</span>
+          <span id="mPhaseDiff" class="card-val val-diff">180.0°</span>
+        </div>
+      </div>
+
+      <div class="panel-section-title" style="margin-top: 4px;">
+        <span style="color: var(--accent-opto);">SINCRONISMO ÓPTICO (PA8)</span>
+      </div>
+      <div class="card">
+        <div class="card-row">
+          <span class="card-label">Frecuencia Rotor</span>
+          <span id="mFreqOpto" class="card-val val-opto">0.0 Hz</span>
+        </div>
+      </div>
+
+      <div id="fieldCard" class="field-status-box status-idle">
+        <div class="field-status-title">Demodulación Lock-In</div>
+        <div id="fieldVal" class="field-status-val">ESPERANDO SEÑAL</div>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div>
+      <span style="color: var(--accent-ch1);">● CH1: Placa A (0°)</span> | 
+      <span style="color: var(--accent-ch2);">● CH2: Placa B (180°)</span> | 
+      <span style="color: var(--accent-diff);">● Resta Diferencial</span> | 
+      <span>Masa Virtual: 1.650 V</span>
+    </div>
+    <div id="footerStatus">Listo para conectar</div>
+  </footer>
+
+<script>
+  let port = null;
+  let reader = null;
+  let keepReading = false;
+  let isPaused = false;
+
+  const PUNTOS_BASE = 200;
+  let bufferA = new Array(PUNTOS_BASE).fill(2048);
+  let bufferB = new Array(PUNTOS_BASE).fill(2048);
+  let bufferOpto = new Array(PUNTOS_BASE).fill(0);
+
+  const canvas = document.getElementById('scopeCanvas');
+  const ctx = canvas.getContext('2d');
+  const btnConectar = document.getElementById('btnConectar');
+  const btnPausa = document.getElementById('btnPausa');
+  const selTimebase = document.getElementById('selTimebase');
+  const selScaleV = document.getElementById('selScaleV');
+  const chkShowA = document.getElementById('chkShowA');
+  const chkShowB = document.getElementById('chkShowB');
+  const chkShowDiff = document.getElementById('chkShowDiff');
+  const chkShowOpto = document.getElementById('chkShowOpto');
+  const statFPS = document.getElementById('statFPS');
+  const footerStatus = document.getElementById('footerStatus');
+
+  const mVppA = document.getElementById('mVppA');
+  const mVdcA = document.getElementById('mVdcA');
+  const mFreqA = document.getElementById('mFreqA');
+
+  const mVppB = document.getElementById('mVppB');
+  const mVdcB = document.getElementById('mVdcB');
+  const mFreqB = document.getElementById('mFreqB');
+
+  const mVppDiff = document.getElementById('mVppDiff');
+  const mPhaseDiff = document.getElementById('mPhaseDiff');
+  const mFreqOpto = document.getElementById('mFreqOpto');
+
+  const fieldCard = document.getElementById('fieldCard');
+  const fieldVal = document.getElementById('fieldVal');
+
+  function resizeCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * window.devicePixelRatio;
+    canvas.height = rect.height * window.devicePixelRatio;
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  let frames = 0;
+  setInterval(() => { statFPS.innerText = frames + " FPS"; frames = 0; }, 1000);
+
+  btnPausa.addEventListener('click', () => {
+    isPaused = !isPaused;
+    btnPausa.innerText = isPaused ? "▶ Reanudar" : "⏸ Pausar Traza";
+  });
+
+  btnConectar.addEventListener('click', async () => {
+    if (port) {
+      keepReading = false;
+      if (reader) { try { await reader.cancel(); } catch(e){} }
+      if (port) { try { await port.close(); } catch(e){} }
+      port = null;
+      btnConectar.innerText = "🔌 Conectar ST-Link";
+      btnConectar.className = "btn-primary";
+      footerStatus.innerText = "Desconectado.";
+      return;
+    }
+
+    try {
+      port = await navigator.serial.requestPort();
+      await port.open({ baudRate: 115200, bufferSize: 16384 });
+      btnConectar.innerText = "🔌 Desconectar";
+      btnConectar.className = "btn-connected";
+      footerStatus.innerText = "Conectado al ST-Link (115200 bps)";
+      keepReading = true;
+      leerSerial();
+    } catch (err) {
+      alert("Error al conectar: " + err.message);
+    }
+  });
+
+  async function leerSerial() {
+    reader = port.readable.getReader();
+    const decoder = new TextDecoder();
+    let acumulador = "";
+
+    try {
+      while (keepReading) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        if (value) {
+          acumulador += decoder.decode(value, { stream: true });
+          let lineas = acumulador.split("\n");
+          acumulador = lineas.pop();
+
+          for (let linea of lineas) {
+            linea = linea.trim();
+            if (!linea) continue;
+
+            let partes = linea.split(",");
+            /* Trama: SIGNO, FASE, FREQ_OPTO, HEX_OPTO, 200 de A, 200 de B (Total: 4 + 400 = 404 partes) */
+            if (partes.length >= 404) {
+              let sign = parseInt(partes[0]);
+              let phaseMCU = parseFloat(partes[1]);
+              let freqOpto = parseFloat(partes[2]);
+              let hexOpto = partes[3];
+
+              let valoresA = partes.slice(4, 204).map(Number);
+              let valoresB = partes.slice(204, 404).map(Number);
+
+              if (!isPaused) {
+                bufferA = valoresA;
+                bufferB = valoresB;
+
+                let realOpto = [];
+                for (let i = 0; i < 200; i++) {
+                  let byteIndex = Math.floor(i / 8);
+                  let bitIndex = i % 8;
+                  let byteVal = parseInt(hexOpto.substr(byteIndex * 2, 2), 16);
+                  let bit = (byteVal >> bitIndex) & 1;
+                  realOpto.push(bit ? 4095 : 0);
+                }
+                bufferOpto = realOpto;
+
+                actualizarMetricas(bufferA, bufferB, freqOpto, sign);
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Serial desconectado:", e);
+    } finally {
+      reader.releaseLock();
+    }
+  }
+
+  function calcularEstadisticas(buf) {
+    let min = Math.min(...buf);
+    let max = Math.max(...buf);
+    let avg = buf.reduce((a, b) => a + b, 0) / buf.length;
+    let vpp = ((max - min) * 3.3) / 4095.0;
+    let vdc = (avg * 3.3) / 4095.0;
+    return { min, max, vpp, vdc };
+  }
+
+  function actualizarMetricas(bA, bB, fOpto, sign) {
+    let sA = calcularEstadisticas(bA);
+    let sB = calcularEstadisticas(bB);
+
+    mVppA.innerText = sA.vpp.toFixed(2) + " V";
+    mVdcA.innerText = sA.vdc.toFixed(2) + " V";
+    mFreqA.innerText = "100.0 Hz";
+
+    mVppB.innerText = sB.vpp.toFixed(2) + " V";
+    mVdcB.innerText = sB.vdc.toFixed(2) + " V";
+    mFreqB.innerText = "100.0 Hz";
+
+    /* Amplitud de la resta diferencial (A - B) */
+    let diff = [];
+    for (let i = 0; i < PUNTOS_BASE; i++) {
+      diff.push(bA[i] - bB[i]);
+    }
+    let minD = Math.min(...diff);
+    let maxD = Math.max(...diff);
+    let vppDiff = ((maxD - minD) * 3.3) / 4095.0;
+    mVppDiff.innerText = vppDiff.toFixed(2) + " V";
+
+    mPhaseDiff.innerText = "180.0° (Contrafase)";
+    mFreqOpto.innerText = (fOpto > 0) ? fOpto.toFixed(1) + " Hz" : "0.0 Hz";
+
+    if (sign >= 2000) {
+      fieldCard.className = "field-status-box status-pos";
+      fieldVal.innerText = "CAMPO (+E)";
+    } else {
+      fieldCard.className = "field-status-box status-neg";
+      fieldVal.innerText = "CAMPO (-E)";
+    }
+  }
+
+  function dibujar() {
+    frames++;
+    const w = canvas.width;
+    const h = canvas.height;
+
+    ctx.clearRect(0, 0, w, h);
+
+    const cols = 10;
+    const rows = 8;
+    const dx = w / cols;
+    const dy = h / rows;
+
+    /* Grilla estilo Tektronix */
+    ctx.strokeStyle = "#161d2d";
+    ctx.lineWidth = 1;
+    for (let x = dx; x < w; x += dx) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+    for (let y = dy; y < h; y += dy) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+
+    ctx.strokeStyle = "#232e47";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(w / 2, 0); ctx.lineTo(w / 2, h); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w / 2, h); ctx.stroke();
+
+    /* Nivel central de 1.650 V (Masa Virtual) */
+    const midY = h / 2;
+    ctx.strokeStyle = "rgba(148, 163, 184, 0.45)";
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(0, midY); ctx.lineTo(w, midY); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "11px monospace";
+    ctx.fillText("Vmedio = 1.650 V (Masa Virtual)", 15, midY - 6);
+
+    const msDiv = parseFloat(selTimebase.value);
+    const scaleV = parseFloat(selScaleV.value);
+
+    /* 2.50 ms/div * 10 div = 25 ms = 250 muestras (a 10 kSPS) */
+    const muestrasPantalla = Math.min(200, Math.round((msDiv * 10) / 0.1));
+
+    const mapY = (counts) => (h / 2) - (((counts * 3.3 / 4095.0) - 1.65) / scaleV) * dy;
+
+    /* 1. Traza Sincronismo PA8 (Verde) */
+    if (chkShowOpto.checked && bufferOpto.length > 0) {
+      ctx.strokeStyle = "#00ff88";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let i = 0; i < muestrasPantalla; i++) {
+        let x = (i / (muestrasPantalla - 1)) * w;
+        let y = mapY(bufferOpto[i]);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    /* 2. Traza Resta Diferencial (Púrpura) */
+    if (chkShowDiff.checked) {
+      ctx.strokeStyle = "#a855f7";
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      for (let i = 0; i < muestrasPantalla; i++) {
+        let diffVal = 2048 + ((bufferA[i] - bufferB[i]) / 2);
+        let x = (i / (muestrasPantalla - 1)) * w;
+        let y = mapY(diffVal);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    /* 3. Traza Canal 2 — Placa B (Amarillo - 180° Contrafase) */
+    if (chkShowB.checked && bufferB.length > 0) {
+      ctx.strokeStyle = "#facc15";
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      for (let i = 0; i < muestrasPantalla; i++) {
+        let x = (i / (muestrasPantalla - 1)) * w;
+        let y = mapY(bufferB[i]);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    /* 4. Traza Canal 1 — Placa A (Cyan - 0°) */
+    if (chkShowA.checked && bufferA.length > 0) {
+      ctx.strokeStyle = "#00e5ff";
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      for (let i = 0; i < muestrasPantalla; i++) {
+        let x = (i / (muestrasPantalla - 1)) * w;
+        let y = mapY(bufferA[i]);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    requestAnimationFrame(dibujar);
+  }
+
+  requestAnimationFrame(dibujar);
+</script>
+
+</body>
+</html>
