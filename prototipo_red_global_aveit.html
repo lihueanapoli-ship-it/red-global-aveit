@@ -1,570 +1,1814 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SAMDE V4 — Osciloscopio Diferencial (Sectores A y B en Contrafase)</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AVEIT | Red Global y Sistema Interno (/aveit/sys)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --bg-main: #0a0d14;
-      --bg-panel: #111622;
-      --bg-card: #161d2d;
-      --border-color: #232d42;
-      --accent-ch1: #00e5ff;   /* Cyan: Placa A (0°) */
-      --accent-ch2: #facc15;   /* Amarillo: Placa B (180° Contrafase) */
-      --accent-diff: #a855f7;  /* Púrpura: Resta Diferencial (A - B) */
-      --accent-opto: #00ff88;  /* Verde: Sincronismo PA8 */
-      --text-main: #f1f5f9;
-      --text-muted: #94a3b8;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
-
     body {
-      background-color: var(--bg-main);
-      color: var(--text-main);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      width: 100vw;
-      height: 100vh;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
+      font-family: 'Roboto', sans-serif;
+      background-color: #f4f6f8;
+      color: #263238;
+      overflow-x: hidden;
     }
-
-    header {
-      height: 50px;
-      background: var(--bg-panel);
-      border-bottom: 1px solid var(--border-color);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 1.5rem;
-      flex-shrink: 0;
+    h1, h2, h3, h4, .font-heading {
+      font-family: 'Montserrat', sans-serif;
     }
+    .sys-bg { background-color: #1c2228; }
+    .sys-sidebar { background-color: #232b32; }
+    .sys-card { background-color: #29323a; }
+    .sys-card-hover:hover { background-color: #313c46; }
+    .sys-teal { background-color: #009688; }
+    .sys-teal-hover:hover { background-color: #00796b; }
+    .sys-teal-text { color: #26a69a; }
+    .sys-border { border-color: #37434d; }
 
-    .brand { display: flex; align-items: center; gap: 10px; }
-    .brand-logo {
-      width: 13px; height: 13px; border-radius: 50%;
-      background: var(--accent-ch1); box-shadow: 0 0 10px var(--accent-ch1);
+    .fade-in {
+      animation: fadeIn 0.22s ease-in-out;
     }
-    .brand-title { font-size: 15px; font-weight: 700; letter-spacing: 0.5px; }
-    .brand-subtitle { font-size: 11px; color: var(--text-muted); margin-left: 6px; }
-
-    .header-actions { display: flex; align-items: center; gap: 10px; }
-
-    button {
-      background: var(--bg-card); color: var(--text-main);
-      border: 1px solid var(--border-color); padding: 6px 14px;
-      border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;
-      transition: all 0.2s ease;
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
     }
-    button:hover { background: #1e273d; }
-    button.btn-primary { background: #0284c7; border-color: #38bdf8; color: #fff; }
-    button.btn-connected { background: #065f46; border-color: #10b981; color: #a7f3d0; }
-
-    .toolbar {
-      height: 48px; background: #0d121c; border-bottom: 1px solid var(--border-color);
-      display: flex; align-items: center; padding: 0 1.5rem; gap: 16px;
-      flex-shrink: 0; font-size: 12px; flex-wrap: wrap;
-    }
-
-    .tool-item { display: flex; align-items: center; gap: 6px; }
-    .tool-label { color: var(--text-muted); font-weight: 600; font-size: 11px; text-transform: uppercase; }
-
-    select {
-      background: var(--bg-card); color: var(--accent-ch1);
-      border: 1px solid var(--border-color); padding: 4px 8px;
-      border-radius: 5px; font-size: 12px; font-weight: 600; outline: none;
-    }
-    select.time-select { color: #f59e0b; }
-    select.v-select { color: var(--accent-ch2); }
-
-    .main-workspace { flex: 1; display: flex; position: relative; overflow: hidden; }
-    .canvas-wrapper { flex: 1; position: relative; height: 100%; background: #05070a; }
-    canvas { width: 100%; height: 100%; display: block; }
-
-    aside {
-      width: 330px; background: var(--bg-panel); border-left: 1px solid var(--border-color);
-      display: flex; flex-direction: column; gap: 6px; padding: 0.8rem;
-      overflow-y: auto; flex-shrink: 0;
-    }
-
-    .panel-section-title {
-      font-size: 10.5px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 1px; color: var(--text-muted); display: flex; justify-content: space-between;
-      align-items: center; margin-top: 3px;
-    }
-
-    .card {
-      background: var(--bg-card); border: 1px solid var(--border-color);
-      border-radius: 6px; padding: 6px 10px; display: flex; flex-direction: column; gap: 2px;
-    }
-
-    .card-row { display: flex; justify-content: space-between; align-items: center; }
-    .card-label { font-size: 10.5px; color: var(--text-muted); font-weight: 500; }
-    .card-val { font-family: ui-monospace, monospace; font-size: 14.5px; font-weight: 700; }
-    .val-ch1 { color: var(--accent-ch1); }
-    .val-ch2 { color: var(--accent-ch2); }
-    .val-diff { color: var(--accent-diff); }
-    .val-opto { color: var(--accent-opto); }
-
-    .badge-lock {
-      padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; text-align: center;
-    }
-    .lock-locked { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981; }
-    .lock-free { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid #f59e0b; }
-
-    .field-status-box {
-      margin-top: auto; border-radius: 8px; padding: 10px; text-align: center;
-      display: flex; flex-direction: column; gap: 3px; border: 1px solid transparent;
-      transition: all 0.3s ease;
-    }
-    .field-status-title { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; }
-    .field-status-val { font-size: 18px; font-weight: 800; letter-spacing: 0.5px; }
-    .status-pos { background: rgba(16, 185, 129, 0.15); border-color: #10b981; color: #34d399; }
-    .status-neg { background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #f87171; }
-    .status-idle { background: rgba(148, 163, 184, 0.1); border-color: #475569; color: #94a3b8; }
-
-    footer {
-      height: 30px; background: #090c12; border-top: 1px solid var(--border-color);
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 1.5rem; font-size: 11px; color: var(--text-muted);
-      font-family: ui-monospace, monospace; flex-shrink: 0;
-    }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #1c2228; }
+    ::-webkit-scrollbar-thumb { background: #37474f; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #009688; }
   </style>
 </head>
-<body>
+<body class="min-h-screen flex flex-col">
 
-  <header>
-    <div class="brand">
-      <div class="brand-logo"></div>
-      <div class="brand-title">SAMDE V4 <span class="brand-subtitle">Digitalización Diferencial A/B (100 Hz Contrafase)</span></div>
-    </div>
-    <div class="header-actions">
-      <button id="btnPausa">⏸ Pausar Traza</button>
-      <button id="btnConectar" class="btn-primary">🔌 Conectar ST-Link</button>
-    </div>
-  </header>
-
-  <div class="toolbar">
-    <!-- BASE DE TIEMPO (Tektronix M 2.50 ms) -->
-    <div class="tool-item">
-      <span class="tool-label">Base Tiempo:</span>
-      <select id="selTimebase" class="time-select">
-        <option value="1.0">1.0 ms/div</option>
-        <option value="2.0">2.0 ms/div</option>
-        <option value="2.5" selected>2.50 ms/div (Como Tektronix)</option>
-        <option value="5.0">5.0 ms/div</option>
-      </select>
-    </div>
-
-    <!-- ESCALA VERTICAL (Tektronix 500 mV/div) -->
-    <div class="tool-item">
-      <span class="tool-label" style="color: var(--accent-ch1);">Escala V/div:</span>
-      <select id="selScaleV" class="v-select">
-        <option value="0.20">200 mV/div</option>
-        <option value="0.50" selected>500 mV/div (Tektronix)</option>
-        <option value="1.00">1.00 V/div</option>
-      </select>
-    </div>
-
-    <!-- VISIBILIDAD DE TRAZAS -->
-    <div class="tool-item" style="gap: 10px;">
-      <label style="cursor: pointer; display: flex; align-items: center; gap: 4px; color: var(--accent-ch1);">
-        <input type="checkbox" id="chkShowA" checked> Placa A (PA0)
-      </label>
-      <label style="cursor: pointer; display: flex; align-items: center; gap: 4px; color: var(--accent-ch2);">
-        <input type="checkbox" id="chkShowB" checked> Placa B (PA1)
-      </label>
-      <label style="cursor: pointer; display: flex; align-items: center; gap: 4px; color: var(--accent-diff);">
-        <input type="checkbox" id="chkShowDiff"> Resta (A - B)
-      </label>
-      <label style="cursor: pointer; display: flex; align-items: center; gap: 4px; color: var(--accent-opto);">
-        <input type="checkbox" id="chkShowOpto"> Sincro (PA8)
-      </label>
-    </div>
-
-    <div class="tool-item" style="margin-left: auto;">
-      <span id="statFPS" style="color: var(--text-main); font-weight: bold; font-family: monospace;">60 FPS</span>
+  <!-- ===================================================================== -->
+  <!-- BARRA SUPERIOR DE CONTROL DEL PROTOTIPO                               -->
+  <!-- ===================================================================== -->
+  <div class="bg-slate-950 text-white px-4 py-2 border-b border-teal-500/40 sticky top-0 z-50 shadow-xl">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <span class="bg-teal-500 text-slate-950 text-[11px] font-black px-2 py-0.5 rounded uppercase tracking-wider">Prototipo V3.0</span>
+        <span class="text-xs text-slate-300 font-medium hidden sm:inline">Red Global AVEIT · Cápsula Histórica + Reserva Sede + Rifa Digital + Pase GV</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="switchMainTab('public')" id="tab-btn-public" class="px-3 py-1.5 rounded text-xs font-bold transition bg-teal-500 text-slate-950 shadow">
+          1. Web Pública (/exviajeros)
+        </button>
+        <button onclick="switchMainTab('sys')" id="tab-btn-sys" class="px-3 py-1.5 rounded text-xs font-bold transition bg-slate-800 text-slate-300 hover:bg-slate-700">
+          2. Sistema Interno (/aveit/sys/)
+        </button>
+        <button onclick="switchMainTab('pitch')" id="tab-btn-pitch" class="px-3 py-1.5 rounded text-xs font-bold transition bg-slate-800 text-slate-300 hover:bg-slate-700">
+          3. Matriz Win-Win & Sinergias
+        </button>
+      </div>
     </div>
   </div>
 
-  <div class="main-workspace">
-    <div class="canvas-wrapper">
-      <canvas id="scopeCanvas"></canvas>
-    </div>
+  <!-- ===================================================================== -->
+  <!-- VISTA 1: WEB PÚBLICA (ESTUDIANTES UTN, EMPRESAS Y HUELLA GLOBAL)      -->
+  <!-- ===================================================================== -->
+  <div id="view-public" class="flex-1 flex flex-col fade-in">
+    
+    <header class="bg-white text-slate-800 shadow-sm sticky top-10 z-40">
+      <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+        <div class="flex items-center gap-3.5 cursor-pointer" onclick="window.scrollTo({top:0, behavior:'smooth'})">
+          <!-- Escudo SVG Oficial AVEIT -->
+          <svg class="w-12 h-14 drop-shadow-sm flex-shrink-0" viewBox="0 0 100 115" fill="none">
+            <path d="M22 8H78L84 18C90 18 95 25 93 34C91 41 85 43 85 52C85 82 65 98 50 109C35 98 15 82 15 52C15 43 9 41 7 34C5 25 10 18 16 18L22 8Z" fill="#ffffff" stroke="#0b2545" stroke-width="5"/>
+            <path d="M22 8H78L84 18C90 18 95 25 93 34C91 41 85 43 85 50H15C15 43 9 41 7 34C5 25 10 18 16 18L22 8Z" fill="#48bfe3" stroke="#0b2545" stroke-width="5"/>
+            <text x="50" y="29" text-anchor="middle" fill="#ffffff" font-family="Montserrat, sans-serif" font-weight="800" font-size="10" letter-spacing="0.8">ARGENTINA</text>
+            <rect x="35" y="35" width="30" height="28" fill="#ffffff" stroke="#0b2545" stroke-width="4"/>
+            <line x1="40" y1="49" x2="60" y2="49" stroke="#0b2545" stroke-width="3.5"/>
+            <line x1="50" y1="39" x2="50" y2="59" stroke="#0b2545" stroke-width="3.5"/>
+            <path d="M42 40 C46 46, 54 46, 58 40" stroke="#0b2545" stroke-width="3" fill="none"/>
+            <path d="M42 58 C46 52, 54 52, 58 58" stroke="#0b2545" stroke-width="3" fill="none"/>
+            <text x="50" y="84" text-anchor="middle" fill="#0b2545" font-family="Montserrat, sans-serif" font-weight="900" font-size="19">AVEIT</text>
+          </svg>
+          <div>
+            <div class="font-extrabold text-xl tracking-tight text-slate-900 leading-none">AVEIT</div>
+            <div class="text-[11px] text-slate-500 font-medium tracking-wider uppercase mt-0.5">UTN · Facultad Regional Córdoba</div>
+          </div>
+        </div>
 
-    <aside>
-      <div class="panel-section-title">
-        <span style="color: var(--accent-ch1);">MEDIDAS CH1 — PLACA A (PA0)</span>
+        <nav class="hidden lg:flex items-center gap-7 text-xs font-bold tracking-wider text-slate-600 uppercase">
+          <a href="#inicio" class="hover:text-teal-600 transition">Inicio</a>
+          <a href="#impacto-mundial" class="hover:text-teal-600 transition">Nosotros ▾</a>
+          <a href="#alianzas-empresas" class="hover:text-teal-600 transition">Gran Rifa</a>
+          <a href="#impacto-mundial" class="hover:text-teal-600 transition">El Viaje</a>
+          <a href="#propuesta-estudiantes" class="hover:text-teal-600 transition">Cultura AVEIT</a>
+          <a href="#impacto-mundial" class="text-teal-600 border-b-2 border-teal-500 pb-1">Huella Global</a>
+          <button onclick="switchMainTab('sys')" class="bg-[#26a69a] hover:bg-[#00897b] text-white px-4 py-2 rounded shadow-sm transition flex items-center gap-1.5">
+            <span>INGRESAR</span>
+          </button>
+        </nav>
       </div>
-      <div class="card">
-        <div class="card-row">
-          <span class="card-label">Vpico-pico</span>
-          <span id="mVppA" class="card-val val-ch1">0.00 V</span>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-row">
-          <span class="card-label">Vmedio (DC)</span>
-          <span id="mVdcA" class="card-val val-ch1">0.00 V</span>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-row">
-          <span class="card-label">Frecuencia Medida</span>
-          <span id="mFreqA" class="card-val val-ch1">0.0 Hz</span>
-        </div>
-      </div>
+    </header>
 
-      <div class="panel-section-title" style="margin-top: 4px;">
-        <span style="color: var(--accent-ch2);">MEDIDAS CH2 — PLACA B (PA1)</span>
-      </div>
-      <div class="card">
-        <div class="card-row">
-          <span class="card-label">Vpico-pico</span>
-          <span id="mVppB" class="card-val val-ch2">0.00 V</span>
+    <!-- Hero Público -->
+    <section id="inicio" class="relative bg-slate-900 text-white py-20 px-6 overflow-hidden" style="background: linear-gradient(135deg, rgba(15,23,42,0.92) 0%, rgba(19,78,74,0.88) 100%), url('https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1600&q=80') center/cover;">
+      <div class="max-w-5xl mx-auto text-center relative z-10">
+        <span class="inline-flex items-center gap-2 bg-teal-500/20 border border-teal-400/40 text-teal-300 text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-widest mb-5">
+          🌍 Más de 55 años lanzando ingenieros al mundo
+        </span>
+        <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight mb-6">
+          Formamos el Talento Tecnológico que <span class="text-teal-400">Impulsa la Industria Global</span>
+        </h1>
+        <p class="text-slate-200 text-base sm:text-lg max-w-3xl mx-auto font-normal leading-relaxed mb-8">
+          Somos una asociación sin fines de lucro integrada por estudiantes e ingenieros de la <strong>UTN Facultad Regional Córdoba</strong>. Desde 1969 conectamos la excelencia académica con los centros de innovación y producción más exigentes.
+        </p>
+        <div class="flex flex-wrap items-center justify-center gap-4">
+          <a href="#propuesta-estudiantes" class="bg-[#26a69a] hover:bg-[#00897b] text-white font-bold text-xs sm:text-sm px-6 py-3.5 rounded shadow-lg transition uppercase tracking-wider">
+            🎓 Soy Estudiante UTN · Quiero Sumarme
+          </a>
+          <a href="#alianzas-empresas" class="bg-white/10 hover:bg-white/20 border border-white/30 text-white font-bold text-xs sm:text-sm px-6 py-3.5 rounded transition uppercase tracking-wider">
+            🏢 Alianzas y Patrocinios Empresariales
+          </a>
+          <button onclick="switchMainTab('sys')" class="bg-slate-950/70 hover:bg-slate-950 border border-teal-400/40 text-teal-300 font-bold text-xs sm:text-sm px-5 py-3.5 rounded transition uppercase tracking-wider">
+            🔐 Portal Socios y Exviajeros
+          </button>
         </div>
       </div>
-      <div class="card">
-        <div class="card-row">
-          <span class="card-label">Vmedio (DC)</span>
-          <span id="mVdcB" class="card-val val-ch2">0.00 V</span>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-row">
-          <span class="card-label">Frecuencia Medida</span>
-          <span id="mFreqB" class="card-val val-ch2">0.0 Hz</span>
-        </div>
-      </div>
+    </section>
 
-      <div class="panel-section-title" style="margin-top: 4px;">
-        <span style="color: var(--accent-diff);">RESTA DIFERENCIAL (A - B)</span>
-      </div>
-      <div class="card">
-        <div class="card-row">
-          <span class="card-label">Vpp Diferencial</span>
-          <span id="mVppDiff" class="card-val val-diff">0.00 V</span>
+    <!-- Indicadores Numéricos -->
+    <section class="bg-[#1b2228] text-white py-8 border-b border-slate-800">
+      <div class="max-w-6xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+        <div>
+          <div class="text-3xl sm:text-4xl font-extrabold text-teal-400">+55 Años</div>
+          <div class="text-[11px] uppercase tracking-widest text-slate-400 mt-1 font-semibold">De Trayectoria en UTN-FRC</div>
+        </div>
+        <div>
+          <div class="text-3xl sm:text-4xl font-extrabold text-sky-400">+58 Camadas</div>
+          <div class="text-[11px] uppercase tracking-widest text-slate-400 mt-1 font-semibold">Grupos Viajeros de Ingeniería</div>
+        </div>
+        <div>
+          <div class="text-3xl sm:text-4xl font-extrabold text-amber-400">+1.100</div>
+          <div class="text-[11px] uppercase tracking-widest text-slate-400 mt-1 font-semibold">Ingenieros Graduados</div>
+        </div>
+        <div>
+          <div class="text-3xl sm:text-4xl font-extrabold text-emerald-400">+250</div>
+          <div class="text-[11px] uppercase tracking-widest text-slate-400 mt-1 font-semibold">Empresas e Industrias Aliadas</div>
         </div>
       </div>
-      <div class="card">
-        <div class="card-row">
-          <span class="card-label">Desfasaje Medido (A vs B)</span>
-          <span id="mPhaseDiff" class="card-val val-diff">180.0°</span>
-        </div>
-      </div>
+    </section>
 
-      <div class="panel-section-title" style="margin-top: 4px;">
-        <span style="color: var(--accent-opto);">SINCRONISMO ÓPTICO (PA8)</span>
-      </div>
-      <div class="card">
-        <div class="card-row">
-          <span class="card-label">Frecuencia Rotor</span>
-          <span id="mFreqOpto" class="card-val val-opto">0.0 Hz</span>
+    <!-- GLOBO 3D Y DETALLE REGIONAL -->
+    <section id="impacto-mundial" class="py-16 px-6 bg-white">
+      <div class="max-w-7xl mx-auto">
+        <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+          <div>
+            <span class="text-xs font-extrabold uppercase tracking-widest text-teal-600 block mb-1">Presencia Internacional</span>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900">Huella Global de Ingenieros AVEIT</h2>
+            <p class="text-sm text-slate-600 mt-1 max-w-2xl">
+              Explorá la red de graduados en el mundo interactivo o cambiá a la vista de mapa plano.
+            </p>
+          </div>
+          <div class="flex items-center gap-2 bg-slate-100 p-1.5 rounded-lg border border-slate-200 self-start">
+            <button onclick="setMapMode('3d')" id="btn-map-3d" class="px-3 py-1.5 rounded text-xs font-bold bg-slate-900 text-white shadow transition">
+              🌐 Globo 3D
+            </button>
+            <button onclick="setMapMode('2d')" id="btn-map-2d" class="px-3 py-1.5 rounded text-xs font-bold text-slate-600 hover:text-slate-900 transition">
+              🗺️ Mapa Mundi 2D
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+          <div class="lg:col-span-8 bg-[#0f172a] rounded-2xl p-5 border border-slate-800 shadow-xl flex flex-col justify-between relative overflow-hidden min-h-[440px]">
+            <div class="flex flex-wrap items-center justify-between gap-2 z-10 mb-2">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-teal-400 animate-ping"></span>
+                <span class="text-xs font-bold text-slate-300" id="map-instruction">Arrastrá el globo para rotarlo o hacé clic en un polo</span>
+              </div>
+              <div class="flex flex-wrap gap-1.5">
+                <button onclick="focusHub(0)" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-teal-600 text-slate-200 text-[11px] font-semibold transition">🇦🇷 Córdoba (+420)</button>
+                <button onclick="focusHub(1)" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-teal-600 text-slate-200 text-[11px] font-semibold transition">🇦🇷 Bs.As. (+95)</button>
+                <button onclick="focusHub(2)" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-teal-600 text-slate-200 text-[11px] font-semibold transition">🇩🇪 Alemania (+38)</button>
+                <button onclick="focusHub(3)" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-teal-600 text-slate-200 text-[11px] font-semibold transition">🇪🇸🇮🇹 España/Italia (+54)</button>
+                <button onclick="focusHub(4)" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-teal-600 text-slate-200 text-[11px] font-semibold transition">🇳🇱 Países Bajos (+14)</button>
+                <button onclick="focusHub(5)" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-teal-600 text-slate-200 text-[11px] font-semibold transition">🇺🇸 EE.UU. (+26)</button>
+              </div>
+            </div>
+
+            <div class="relative flex-1 flex items-center justify-center my-2">
+              <canvas id="globeCanvas" width="680" height="340" class="cursor-grab active:cursor-grabbing max-w-full"></canvas>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between text-[11px] text-slate-400 border-t border-slate-800/80 pt-3 z-10">
+              <span>● Cada nodo representa egresados desempeñándose en plantas e industrias locales.</span>
+              <span class="text-teal-400 font-semibold">Clic en cualquier polo para ver detalles</span>
+            </div>
+          </div>
+
+          <div class="lg:col-span-4 bg-slate-900 text-white rounded-2xl p-6 border border-slate-800 shadow-xl flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+                <div>
+                  <span id="hub-region-tag" class="text-[10px] font-extrabold uppercase tracking-widest text-teal-400 bg-teal-500/10 px-2.5 py-1 rounded">ARGENTINA · NODO CENTRAL</span>
+                  <h3 id="hub-title" class="text-xl font-extrabold mt-2">Córdoba Capital y Gran Córdoba</h3>
+                </div>
+                <div class="text-right">
+                  <div id="hub-count" class="text-3xl font-black text-teal-400">+420</div>
+                  <div class="text-[10px] text-slate-400 uppercase font-bold">Ingenieros</div>
+                </div>
+              </div>
+
+              <p id="hub-desc" class="text-xs text-slate-300 leading-relaxed mb-5">
+                Sede central de AVEIT en la UTN-FRC. Gran densidad de egresados fundadores de industrias metalúrgicas, autopartistas, software factories y docentes universitarios.
+              </p>
+
+              <div class="mb-5">
+                <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Sectores Destacados:</div>
+                <div id="hub-industries" class="flex flex-wrap gap-1.5">
+                  <span class="bg-slate-800 text-slate-200 text-xs px-2.5 py-1 rounded border border-slate-700">Metalúrgica y Autopartes</span>
+                  <span class="bg-slate-800 text-slate-200 text-xs px-2.5 py-1 rounded border border-slate-700">Software & IT</span>
+                  <span class="bg-slate-800 text-slate-200 text-xs px-2.5 py-1 rounded border border-slate-700">Automatización Industrial</span>
+                </div>
+              </div>
+
+              <div class="bg-slate-800/70 rounded-xl p-4 border border-slate-700/70">
+                <div class="text-[11px] font-extrabold uppercase text-amber-400 mb-1">Impacto Vinculado:</div>
+                <p id="hub-impact" class="text-xs text-slate-300 leading-relaxed">
+                  Visitas técnicas periódicas, semillero de pasantías para alumnos de 3° a 5° año y mentoreo profesional.
+                </p>
+              </div>
+            </div>
+
+            <div class="mt-6 pt-4 border-t border-slate-800 flex flex-col gap-2">
+              <a href="#alianzas-empresas" class="w-full text-center bg-teal-500 hover:bg-teal-400 text-slate-950 font-extrabold text-xs py-3 rounded-lg transition uppercase tracking-wider">
+                Vincular mi Empresa con AVEIT
+              </a>
+              <button onclick="switchMainTab('sys')" class="w-full text-center bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs py-2.5 rounded-lg transition">
+                Acceso al Portal Socios / Exviajeros
+              </button>
+            </div>
+          </div>
         </div>
       </div>
+    </section>
 
-      <div id="fieldCard" class="field-status-box status-idle">
-        <div class="field-status-title">Demodulación Lock-In</div>
-        <div id="fieldVal" class="field-status-val">ESPERANDO SEÑAL</div>
+    <!-- Propuesta Dual: Estudiantes y Empresas -->
+    <section id="propuesta-estudiantes" class="py-16 px-6 bg-slate-50 border-t border-slate-200">
+      <div class="max-w-7xl mx-auto">
+        <div class="text-center max-w-3xl mx-auto mb-12">
+          <span class="text-xs font-extrabold uppercase tracking-widest text-teal-600">Comunidad y Desarrollo Continuo</span>
+          <h2 class="text-2xl sm:text-4xl font-extrabold text-slate-900 mt-1">Conectando la Universidad con el Ámbito Profesional</h2>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div class="bg-white rounded-2xl p-8 shadow-md border border-slate-200 flex flex-col justify-between">
+            <div>
+              <div class="inline-flex items-center gap-2 bg-sky-100 text-sky-800 text-xs font-extrabold px-3 py-1 rounded-full uppercase mb-4">
+                🎓 Para Estudiantes UTN-FRC
+              </div>
+              <h3 class="text-2xl font-extrabold text-slate-900 mb-3">¿Por qué sumarte a AVEIT durante tu carrera?</h3>
+              <p class="text-sm text-slate-600 leading-relaxed mb-6">
+                Desarrollá habilidades de gestión, trabajo en equipo y liderazgo real en nuestras subcomisiones, culminando con el histórico Viaje Técnico por Europa.
+              </p>
+              <ul class="space-y-3 text-sm text-slate-700 mb-6">
+                <li class="flex items-start gap-2.5"><span class="text-teal-600 font-bold">✔</span><span><strong>Red de +1.100 Graduados:</strong> Contactos reales, mentoreo y oportunidades laborales.</span></li>
+                <li class="flex items-start gap-2.5"><span class="text-teal-600 font-bold">✔</span><span><strong>Visitas a Plantas Industriales:</strong> Recorridos técnicos en el país y en el exterior.</span></li>
+                <li class="flex items-start gap-2.5"><span class="text-teal-600 font-bold">✔</span><span><strong>Gestión de Eventos Reales:</strong> Maratón Solidaria, Cuna de Emprendedores, Feria de Empleo y Gran Rifa.</span></li>
+              </ul>
+            </div>
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center justify-between text-xs text-slate-600">
+              <span><strong>Campaña de Socios Anual:</strong> En la Sede de Ciudad Universitaria.</span>
+              <span class="font-extrabold text-teal-600 uppercase ml-2">Saber más →</span>
+            </div>
+          </div>
+
+          <div id="alianzas-empresas" class="bg-white rounded-2xl p-8 shadow-md border border-slate-200 flex flex-col justify-between">
+            <div>
+              <div class="inline-flex items-center gap-2 bg-amber-100 text-amber-800 text-xs font-extrabold px-3 py-1 rounded-full uppercase mb-4">
+                🏢 Para Empresas y Patrocinadores
+              </div>
+              <h3 class="text-2xl font-extrabold text-slate-900 mb-3">¿Cómo colaborar con AVEIT?</h3>
+              <p class="text-sm text-slate-600 leading-relaxed mb-6">
+                Posicioná tu marca empleadora frente a miles de estudiantes e ingenieros de la UTN.
+              </p>
+              <ul class="space-y-3 text-sm text-slate-700 mb-6">
+                <li class="flex items-start gap-2.5"><span class="text-amber-600 font-bold">★</span><span><strong>Sponsoreo Oficial:</strong> Espacios en Revista Impresa/Digital, Gran Rifa, Maratón y Web.</span></li>
+                <li class="flex items-start gap-2.5"><span class="text-amber-600 font-bold">★</span><span><strong>Semillero de Pasantías:</strong> Estudiantes acostumbrados a gestionar y trabajar por objetivos.</span></li>
+                <li class="flex items-start gap-2.5"><span class="text-amber-600 font-bold">★</span><span><strong>Visitas Técnicas y Charlas:</strong> Conectá tu planta con los grupos viajeros.</span></li>
+              </ul>
+            </div>
+            <div class="bg-amber-50/70 p-4 rounded-xl border border-amber-200 flex flex-wrap items-center justify-between gap-3">
+              <span class="text-xs text-slate-700"><strong>¿Sos Exviajero con empresa propia?</strong></span>
+              <button onclick="switchMainTab('sys'); showSysSection('sponsors');" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs px-4 py-2 rounded transition uppercase">
+                Ver Opciones de Sponsor
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
-    </aside>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-[#181f24] text-slate-400 py-10 px-6 border-t border-slate-800 mt-auto">
+      <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div class="flex items-center gap-4">
+          <div class="font-extrabold text-2xl text-white tracking-wider">AVEIT</div>
+          <div class="text-xs">
+            <div class="text-slate-200 font-semibold">Asociación Vocacional de Estudiantes e Ingenieros Tecnológicos</div>
+            <div>Personería Jurídica Decreto 2891/72 · Maestro M. López esq. Cruz Roja Argentina (UTN-FRC)</div>
+          </div>
+        </div>
+        <div class="text-xs text-right">
+          <div>Contacto: <span class="text-teal-400">aveitutn@gmail.com</span> | <span class="text-teal-400">rrhh.aveit@gmail.com</span></div>
+          <div class="text-[11px] text-slate-500 mt-1">Sistemas & Subcomisión de Recursos Humanos</div>
+        </div>
+      </div>
+    </footer>
   </div>
 
-  <footer>
-    <div>
-      <span style="color: var(--accent-ch1);">● CH1: Placa A (0°)</span> | 
-      <span style="color: var(--accent-ch2);">● CH2: Placa B (180°)</span> | 
-      <span style="color: var(--accent-diff);">● Resta Diferencial</span> | 
-      <span>Masa Virtual: 1.650 V</span>
+  <!-- ===================================================================== -->
+  <!-- VISTA 2: SISTEMA INTERNO (/aveit/sys/)                                -->
+  <!-- ===================================================================== -->
+  <div id="view-sys" class="hidden flex-1 flex flex-col sys-bg text-slate-100 fade-in">
+    
+    <header class="bg-[#232b32] border-b sys-border px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <svg class="w-8 h-9 flex-shrink-0" viewBox="0 0 100 115" fill="none">
+          <path d="M22 8H78L84 18C90 18 95 25 93 34C91 41 85 43 85 52C85 82 65 98 50 109C35 98 15 82 15 52C15 43 9 41 7 34C5 25 10 18 16 18L22 8Z" fill="#ffffff" stroke="#0b2545" stroke-width="6"/>
+          <path d="M22 8H78L84 18C90 18 95 25 93 34C91 41 85 43 85 50H15C15 43 9 41 7 34C5 25 10 18 16 18L22 8Z" fill="#48bfe3"/>
+          <text x="50" y="84" text-anchor="middle" fill="#0b2545" font-family="Montserrat, sans-serif" font-weight="900" font-size="20">AVEIT</text>
+        </svg>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold text-sm tracking-wide text-white">AVEIT | Sistema de Gestión</span>
+            <span id="sys-url-indicator" class="text-[11px] bg-slate-900 text-teal-400 px-2 py-0.5 rounded font-mono">aveit.frc.utn.edu.ar/aveit/sys/principal</span>
+          </div>
+          <div id="role-subtitle-banner" class="text-[11px] text-slate-400">Modo Socio Activo: incluye obligaciones de sede + módulos de Red Global</div>
+        </div>
+      </div>
+
+      <!-- Selector de Rol en Vivo -->
+      <div class="flex flex-wrap items-center gap-2 bg-slate-900/90 p-1.5 rounded-lg border border-teal-500/40">
+        <span class="text-[11px] font-bold text-slate-300 px-2">Simular vista como:</span>
+        <button onclick="setSysRole('activo')" id="btn-role-activo" class="px-3 py-1.5 rounded text-xs font-extrabold transition bg-teal-500 text-slate-950 shadow">
+          🎒 Socio Activo (Lihue G59)
+        </button>
+        <button onclick="setSysRole('exviajero')" id="btn-role-exviajero" class="px-3 py-1.5 rounded text-xs font-extrabold transition text-slate-300 hover:bg-slate-800">
+          🎓 Exviajero (Ing. Martín GV50)
+        </button>
+      </div>
+
+      <div class="hidden xl:flex items-center gap-4 text-xs text-slate-300 font-semibold">
+        <button onclick="openOnboardingModal()" class="text-teal-400 hover:underline flex items-center gap-1">
+          <span>🚀 Probar Asistente Fin de Viaje</span>
+        </button>
+        <span class="cursor-pointer hover:text-white" onclick="showSysSection('perfil')">⚙️ MI INFORMACIÓN</span>
+        <span id="top-user-badge" class="bg-slate-800 px-3 py-1.5 rounded text-teal-300 font-bold border border-slate-700">👤 LIHUE AHIAN (G59)</span>
+      </div>
+    </header>
+
+    <div class="flex-1 flex flex-col md:flex-row">
+      <!-- SIDEBAR DINÁMICO -->
+      <aside class="w-full md:w-64 sys-sidebar border-r sys-border flex-shrink-0 flex flex-col justify-between p-3">
+        <div>
+          <div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-3 py-2">
+            Navegación
+          </div>
+          <nav class="space-y-1">
+            <button onclick="showSysSection('dashboard')" id="nav-dashboard" class="w-full flex items-center justify-between px-3 py-2.5 rounded text-xs font-bold transition sys-teal text-white">
+              <span>🏠 Panel Principal</span>
+              <span id="badge-role-menu" class="text-[10px] bg-black/25 px-1.5 py-0.5 rounded">G59</span>
+            </button>
+            <button onclick="showSysSection('perfil')" id="nav-perfil" class="w-full flex items-center justify-between px-3 py-2.5 rounded text-xs font-bold text-slate-300 hover:bg-slate-800 transition">
+              <span>🔒 Mi Info & Privacidad</span>
+              <span class="text-[10px] bg-teal-500/20 text-teal-300 px-1.5 py-0.5 rounded">Opt-In</span>
+            </button>
+          </nav>
+
+          <div class="mt-5 text-[10px] font-extrabold uppercase tracking-wider text-teal-400 px-3 py-2 flex items-center justify-between">
+            <span>🌎 Red Global AVEIT</span>
+            <span class="bg-teal-500 text-slate-950 px-1.5 py-0.2 rounded text-[9px]">V3.0</span>
+          </div>
+          <nav class="space-y-1">
+            <!-- MÓDULO NUEVO: CÁPSULA HISTÓRICA POR CAMADAS -->
+            <button onclick="showSysSection('capsula')" id="nav-capsula" class="w-full flex items-center justify-between px-3 py-2.5 rounded text-xs font-bold text-slate-300 hover:bg-slate-800 transition">
+              <span>📜 Cápsula Histórica (GVs)</span>
+              <span class="text-[9px] bg-purple-500/30 text-purple-200 px-1.5 py-0.5 rounded font-bold">G1-G58</span>
+            </button>
+            <button onclick="showSysSection('directorio')" id="nav-directorio" class="w-full flex items-center justify-between px-3 py-2.5 rounded text-xs font-bold text-slate-300 hover:bg-slate-800 transition">
+              <span id="label-nav-directorio">📇 Directorio y Talentos</span>
+            </button>
+            <button onclick="showSysSection('bolsa')" id="nav-bolsa" class="w-full flex items-center justify-between px-3 py-2.5 rounded text-xs font-bold text-slate-300 hover:bg-slate-800 transition">
+              <span id="label-nav-bolsa">💼 Bolsa, Pasantías y Servicios</span>
+            </button>
+            <button onclick="showSysSection('visitas')" id="nav-visitas" class="w-full flex items-center justify-between px-3 py-2.5 rounded text-xs font-bold text-slate-300 hover:bg-slate-800 transition">
+              <span id="label-nav-visitas">🏭 Visitas Técnicas y Charlas</span>
+            </button>
+            <button onclick="showSysSection('sponsors')" id="nav-sponsors" class="w-full flex items-center justify-between px-3 py-2.5 rounded text-xs font-bold text-slate-300 hover:bg-slate-800 transition">
+              <span id="label-nav-sponsors">⭐ Sponsors Corporativos</span>
+              <span class="text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-bold">Rifa/Web</span>
+            </button>
+            <!-- MÓDULO NUEVO: RESERVA DE INSTALACIONES DE SEDE -->
+            <button onclick="showSysSection('quincho')" id="nav-quincho" class="w-full flex items-center justify-between px-3 py-2.5 rounded text-xs font-bold text-slate-300 hover:bg-slate-800 transition">
+              <span>🥩 Reserva de Sede / Quincho</span>
+              <span class="text-[9px] bg-rose-500/20 text-rose-300 px-1.5 py-0.5 rounded font-bold">OyE</span>
+            </button>
+            <button onclick="showSysSection('eventos')" id="nav-eventos" class="w-full flex items-center justify-between px-3 py-2.5 rounded text-xs font-bold text-slate-300 hover:bg-slate-800 transition">
+              <span id="label-nav-eventos">📅 Eventos para Sumarse</span>
+            </button>
+          </nav>
+
+          <!-- Obligaciones internas (Sólo para Socio Activo) -->
+          <div id="sidebar-obligaciones-activo" class="mt-6 pt-4 border-t sys-border">
+            <div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-3 py-1.5 flex items-center justify-between">
+              <span>Obligaciones Socio Activo</span>
+              <span class="text-[9px] text-amber-400">Sede</span>
+            </div>
+            <div class="space-y-1 text-xs text-slate-400 mt-1">
+              <div onclick="showToast('Módulo actual de Socios y Subcomisiones')" class="px-3 py-2 rounded hover:bg-slate-800 cursor-pointer flex justify-between">
+                <span>👥 Socios y Subcomisiones</span><span>▾</span>
+              </div>
+              <div onclick="showToast('Módulo actual de Turnos de Limpieza')" class="px-3 py-2 rounded hover:bg-slate-800 cursor-pointer flex justify-between">
+                <span>🧹 Limpieza (Piso Anfiteatro)</span><span class="text-rose-400 font-bold">06-11</span>
+              </div>
+              <div onclick="showToast('Módulo actual de Rifas y Actas')" class="px-3 py-2 rounded hover:bg-slate-800 cursor-pointer flex justify-between">
+                <span>🎟️ Rifas y Actas</span><span class="text-teal-400 font-bold">Al día</span>
+              </div>
+              <div onclick="showToast('Módulo actual de Tribunal de Disciplina')" class="px-3 py-2 rounded hover:bg-slate-800 cursor-pointer flex justify-between">
+                <span>⚖️ Tribunal (Solicitar T-01)</span><span>+4,5</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mensaje para Exviajero -->
+          <div id="sidebar-nota-exviajero" class="hidden mt-6 p-3 rounded-lg bg-teal-950/40 border border-teal-500/30 text-[11px] text-teal-200 leading-relaxed">
+            <div class="font-extrabold text-teal-400 uppercase mb-1">✨ Entorno Exviajero</div>
+            Se ocultan automáticamente las obligaciones estudiantiles (limpiezas, actas de rifas y tribunal).
+          </div>
+        </div>
+
+        <div class="mt-6 pt-3 border-t sys-border text-[11px] text-slate-400 px-2">
+          <div>Servidor Sede: <span class="text-slate-200 font-semibold">/aveit/sys/</span></div>
+          <div>UTN Facultad Regional Córdoba</div>
+        </div>
+      </aside>
+
+      <!-- ÁREA DE CONTENIDO -->
+      <main class="flex-1 p-5 sm:p-7 overflow-y-auto">
+
+        <!-- ------------------------------------------------------------- -->
+        <!-- SECCIÓN 1: DASHBOARDS (ACTIVO / EXVIAJERO)                    -->
+        <!-- ------------------------------------------------------------- -->
+        <section id="sys-sec-dashboard" class="fade-in">
+          
+          <!-- Sub-dashboard SOCIO ACTIVO -->
+          <div id="dash-content-activo">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-5">
+              <h2 class="text-xl font-bold text-white">Panel Principal — Socio Activo</h2>
+              <span class="text-xs bg-teal-500/20 text-teal-300 border border-teal-500/30 px-3 py-1 rounded-full font-semibold">
+                Sede + Red Global AVEIT
+              </span>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+              <div class="lg:col-span-7 space-y-4">
+                <div class="sys-card p-5 rounded-lg border sys-border text-center">
+                  <div class="text-xs text-slate-400">Panel del Socio</div>
+                  <div class="text-2xl font-bold text-white mt-1">¡Hola, Lihue Ahian!</div>
+                  <div class="text-xs text-teal-400 mt-1">Ingeniería Electrónica (Legajo 89754) · Subcomisión de Recursos Humanos</div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="sys-card p-5 rounded-lg border sys-border flex items-center justify-between">
+                    <div class="w-11 h-11 rounded-lg bg-purple-600 flex items-center justify-center text-xl">👥</div>
+                    <div class="text-right">
+                      <div class="text-xs text-slate-400">Activo</div>
+                      <div class="text-2xl font-extrabold text-white">G59</div>
+                    </div>
+                  </div>
+                  <div class="sys-card p-5 rounded-lg border sys-border flex items-center justify-between">
+                    <div class="w-11 h-11 rounded-lg bg-emerald-600 flex items-center justify-center text-xl">😊</div>
+                    <div class="text-right">
+                      <div class="text-xs text-slate-400">Cuotas Pagas</div>
+                      <div class="text-2xl font-extrabold text-white">9/9</div>
+                      <div class="text-[10px] text-emerald-400">Al día</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sys-card p-5 rounded-lg border sys-border flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-lg bg-teal-600 flex items-center justify-center text-xl">⚖️</div>
+                    <div>
+                      <div class="text-xs text-slate-400">Tribunal de Disciplina</div>
+                      <div class="text-[11px] text-slate-400">Solicitudes T-01 al día</div>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <div class="text-xs text-slate-400">Puntaje</div>
+                    <div class="text-2xl font-extrabold text-white">+4,5 <span class="text-xs text-emerald-400">✔</span></div>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div class="bg-rose-950/40 border border-rose-500/40 rounded-lg p-4">
+                    <div class="text-xs font-extrabold uppercase text-rose-300">🎂 Cumpleaños Próximos</div>
+                    <div class="text-xs text-slate-300 mt-2 space-y-1">
+                      <div class="flex justify-between"><span>Isabella Basso (G61 · PyD)</span><span>30 Oct</span></div>
+                      <div class="flex justify-between"><span>María Jesús Suárez (G61 · PyD)</span><span>30 Oct</span></div>
+                      <div class="flex justify-between"><span>Agustín Ferreyra (G61 · OyE)</span><span>31 Oct</span></div>
+                    </div>
+                  </div>
+                  <div class="bg-purple-950/40 border border-purple-500/40 rounded-lg p-4">
+                    <div class="text-xs font-extrabold uppercase text-purple-300">🧹 Próximas Limpiezas</div>
+                    <div class="text-xs text-slate-300 mt-2">
+                      <div class="font-bold text-white">Sección: Piso Anfiteatro</div>
+                      <div class="text-slate-400 mt-1">Fecha asignada: <strong class="text-purple-300">06-11</strong></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Novedades de la Red para el Activo -->
+              <div class="lg:col-span-5 sys-card p-5 rounded-lg border sys-border flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between border-b sys-border pb-3 mb-4">
+                    <div>
+                      <span class="text-[10px] font-extrabold uppercase tracking-wider text-teal-400">Oportunidades en la Red</span>
+                      <h3 class="text-base font-bold text-white">Conexión con Graduados</h3>
+                    </div>
+                    <span class="w-2.5 h-2.5 rounded-full bg-teal-400 animate-ping"></span>
+                  </div>
+
+                  <div class="space-y-3">
+                    <div class="p-3.5 rounded-lg bg-slate-900/70 border sys-border">
+                      <span class="text-[10px] font-bold uppercase text-amber-400">💼 Pasantía Disponible</span>
+                      <div class="font-bold text-xs text-white mt-1">Pasante Ing. Electrónica / Industrial (20 hs)</div>
+                      <div class="text-[11px] text-slate-400 mt-0.5">Ing. Roberto Iñiguez (GV35) · Horarios flexibles UTN.</div>
+                      <button onclick="showSysSection('bolsa')" class="mt-2 text-[11px] text-teal-400 font-bold hover:underline">Ver detalles →</button>
+                    </div>
+
+                    <div class="p-3.5 rounded-lg bg-slate-900/70 border sys-border">
+                      <span class="text-[10px] font-bold uppercase text-sky-400">🛠️ Publicar Herramientas / Servicios</span>
+                      <div class="font-bold text-xs text-white mt-1">¿Tenés cortadora láser, 3D o brindás desarrollo?</div>
+                      <div class="text-[11px] text-slate-400 mt-0.5">Ofrecé tus servicios en la Bolsa de la Red Global.</div>
+                      <button onclick="showSysSection('bolsa')" class="mt-2 text-[11px] text-sky-400 font-bold hover:underline">Publicar herramienta →</button>
+                    </div>
+
+                    <div class="p-3.5 rounded-lg bg-slate-900/70 border sys-border">
+                      <span class="text-[10px] font-bold uppercase text-purple-400">📜 Cápsula Histórica</span>
+                      <div class="font-bold text-xs text-white mt-1">Explorá las bitácoras de los 58 Grupos Viajeros</div>
+                      <div class="text-[11px] text-slate-400 mt-0.5">Fotos históricas, vehículos e itinerarios desde 1969.</div>
+                      <button onclick="showSysSection('capsula')" class="mt-2 text-[11px] text-purple-400 font-bold hover:underline">Abrir Cápsula →</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sub-dashboard EXVIAJERO (Con Rifa Digital y Accesos Rápidos) -->
+          <div id="dash-content-exviajero" class="hidden">
+            <div class="bg-gradient-to-r from-teal-900/50 to-slate-900 border border-teal-500/40 rounded-xl p-6 mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div>
+                <span class="text-[10px] font-extrabold uppercase tracking-widest bg-teal-500 text-slate-950 px-2.5 py-1 rounded">Portal de Exviajeros</span>
+                <h2 class="text-2xl font-extrabold text-white mt-2">¡Bienvenido, Ing. Martín (GV50)!</h2>
+                <p class="text-xs sm:text-sm text-slate-300 mt-1">
+                  Espacio para graduados: conectá con tu camada, sumá pasantes, reservá el quincho de la Sede o apoyá al próximo Grupo Viajero.
+                </p>
+              </div>
+              <button onclick="showSysSection('perfil')" class="bg-teal-500 hover:bg-teal-400 text-slate-950 font-extrabold text-xs px-4 py-3 rounded-lg shadow transition whitespace-nowrap">
+                🔒 Configuración de Privacidad
+              </button>
+            </div>
+
+            <!-- TARJETA DESTACADA: COMPRA DIGITAL DE GRAN RIFA PARA EXVIAJEROS -->
+            <div class="bg-gradient-to-r from-amber-950/70 via-slate-900 to-slate-900 border-2 border-amber-500/50 rounded-xl p-5 mb-6 flex flex-col lg:flex-row items-center justify-between gap-5 shadow-lg">
+              <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center text-3xl font-black flex-shrink-0">🎟️</div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-[10px] font-extrabold uppercase tracking-wider bg-amber-500/30 text-amber-300 px-2 py-0.5 rounded">Autofinanciamiento GV</span>
+                    <span class="text-xs text-slate-400">Edición N° 61 / 62</span>
+                  </div>
+                  <h3 class="text-base font-extrabold text-white mt-1">Apadriná al próximo Grupo Viajero desde cualquier parte del mundo</h3>
+                  <p class="text-xs text-slate-300 mt-0.5">
+                    Comprá tus boletas 100% online con acreditación al pozo común del Euroviaje o a un socio en particular, sin boletas físicas ni trámites engorrosos.
+                  </p>
+                </div>
+              </div>
+              <div class="flex flex-wrap items-center gap-2.5 flex-shrink-0">
+                <button onclick="openRifaCheckout(1)" class="bg-slate-800 hover:bg-slate-700 border border-amber-500/40 text-amber-300 text-xs font-bold px-3.5 py-2.5 rounded-lg transition">
+                  1 Boleta ($30.000)
+                </button>
+                <button onclick="openRifaCheckout(3)" class="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black px-4 py-2.5 rounded-lg shadow transition">
+                  Combo x3 Boletas ($90.000)
+                </button>
+                <button onclick="showToast('Solicitud de talonario en consignación para tu empresa enviada a Comisión Rifaria')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold px-3 py-2.5 rounded-lg transition">
+                  Pedir Talonario para Empresa
+                </button>
+              </div>
+            </div>
+
+            <!-- Accesos rápidos -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div onclick="showSysSection('capsula')" class="sys-card sys-card-hover p-5 rounded-xl border border-purple-500/30 cursor-pointer transition flex flex-col justify-between">
+                <div>
+                  <div class="w-10 h-10 rounded-lg bg-purple-500/20 text-purple-300 flex items-center justify-center text-xl mb-3">📜</div>
+                  <h3 class="font-bold text-sm text-white">Cápsula Histórica de mi GV</h3>
+                  <p class="text-xs text-slate-400 mt-1">Reviví la nómina, vehículo, fotos e itinerario de tu camada.</p>
+                </div>
+                <span class="text-xs font-bold text-purple-400 mt-4 inline-block">Abrir bitácora →</span>
+              </div>
+
+              <div onclick="showSysSection('quincho')" class="sys-card sys-card-hover p-5 rounded-xl border border-rose-500/30 cursor-pointer transition flex flex-col justify-between">
+                <div>
+                  <div class="w-10 h-10 rounded-lg bg-rose-500/20 text-rose-300 flex items-center justify-center text-xl mb-3">🥩</div>
+                  <h3 class="font-bold text-sm text-white">Reservar Quincho / Asador</h3>
+                  <p class="text-xs text-slate-400 mt-1">Disfrutá de la Sede para asados de camada o reuniones de trabajo.</p>
+                </div>
+                <span class="text-xs font-bold text-rose-400 mt-4 inline-block">Ver calendario →</span>
+              </div>
+
+              <div onclick="showSysSection('bolsa')" class="sys-card sys-card-hover p-5 rounded-xl border sys-border cursor-pointer transition flex flex-col justify-between">
+                <div>
+                  <div class="w-10 h-10 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl mb-3">💼</div>
+                  <h3 class="font-bold text-sm text-white">Buscar Pasantes o B2B</h3>
+                  <p class="text-xs text-slate-400 mt-1">Publicá búsquedas laborales o proveedores industriales de confianza.</p>
+                </div>
+                <span class="text-xs font-bold text-teal-400 mt-4 inline-block">Ir a Bolsa →</span>
+              </div>
+
+              <div onclick="showSysSection('sponsors')" class="sys-card sys-card-hover p-5 rounded-xl border border-amber-500/30 cursor-pointer transition flex flex-col justify-between">
+                <div>
+                  <div class="w-10 h-10 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center text-xl font-bold mb-3">⭐</div>
+                  <h3 class="font-bold text-sm text-white">Sumar Empresa como Sponsor</h3>
+                  <p class="text-xs text-slate-400 mt-1">Presencia de marca en Gran Rifa, Maratón Solidaria y Web.</p>
+                </div>
+                <span class="text-xs font-bold text-amber-400 mt-4 inline-block">Planes Sponsors →</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ------------------------------------------------------------- -->
+        <!-- SECCIÓN 2: CÁPSULA HISTÓRICA POR CAMADAS (NUEVO)              -->
+        <!-- ------------------------------------------------------------- -->
+        <section id="sys-sec-capsula" class="hidden fade-in">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
+            <div>
+              <span class="text-[10px] font-extrabold uppercase tracking-wider text-purple-400">Patrimonio Histórico Documental (1969 - 2026)</span>
+              <h2 class="text-xl font-bold text-white">Cápsula Histórica de Grupos Viajeros (GVs)</h2>
+              <p class="text-xs text-slate-400 mt-0.5">
+                Seleccioná una camada para ver su bitácora técnica, vehículo, anécdotas y la nómina oficial digitalizada de actas.
+              </p>
+            </div>
+            <!-- Selector de Camadas Históricas -->
+            <div class="flex items-center gap-2">
+              <label class="text-xs font-bold text-slate-300">Camada:</label>
+              <select id="select-capsula-gv" onchange="renderCapsula()" class="bg-slate-900 border sys-border rounded-lg px-3 py-2 text-xs font-bold text-teal-300">
+                <option value="GV20">GV 20 (1988) · Luis Del Bel</option>
+                <option value="GV23">GV 23 (1991) · Reinaldo Virovoy</option>
+                <option value="GV35">GV 35 (2003) · Roberto Iñiguez</option>
+                <option value="GV43">GV 43 (2011) · Jonatan Panozzo</option>
+                <option value="GV48">GV 48 (2016) · Nicolás Fanin</option>
+                <option value="GV50">GV 50 (2018) · Martín Gómez</option>
+                <option value="GV58">GV 58 (2025) · Camada Reciente</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Contenido de la Cápsula Histórica Seleccionada -->
+          <div id="capsula-content" class="space-y-5"></div>
+        </section>
+
+        <!-- ------------------------------------------------------------- -->
+        <!-- SECCIÓN 3: RESERVA DE INSTALACIONES / QUINCHO (NUEVO)         -->
+        <!-- ------------------------------------------------------------- -->
+        <section id="sys-sec-quincho" class="hidden fade-in">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
+            <div>
+              <span class="text-[10px] font-extrabold uppercase tracking-wider text-rose-400">Gestión Conjunta OyE & Mantenimiento</span>
+              <h2 class="text-xl font-bold text-white">Reserva de Instalaciones y Sede Social</h2>
+              <p class="text-xs text-slate-400 mt-0.5">
+                Los exviajeros y socios pueden reservar el Quincho/Asador, el Anfiteatro o la Sala de Reuniones para juntadas de camada o actividades profesionales.
+              </p>
+            </div>
+            <button onclick="toggleReservaModal()" class="bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs px-4 py-2.5 rounded-lg shadow transition">
+              + NUEVA SOLICITUD DE RESERVA
+            </button>
+          </div>
+
+          <!-- Formulario de Reserva -->
+          <div id="reserva-form-box" class="hidden sys-card p-5 rounded-xl border border-rose-500/40 mb-6 fade-in">
+            <div class="flex justify-between items-center border-b sys-border pb-3 mb-4">
+              <h3 class="text-sm font-bold text-white">Formulario de Reserva de Instalaciones</h3>
+              <button onclick="toggleReservaModal()" class="text-xs text-slate-400 hover:text-white">✕ Cerrar</button>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+              <div>
+                <label class="text-[11px] text-slate-300 font-bold block mb-1">Espacio a Reservar</label>
+                <select id="res-space" class="w-full bg-slate-900 border sys-border rounded px-3 py-2 text-xs text-white">
+                  <option value="Quincho y Asador Principal">🥩 Quincho y Asador Principal (Hasta 45 personas)</option>
+                  <option value="Anfiteatro Techado">🎭 Anfiteatro Techado / Proyector</option>
+                  <option value="Aulita de Reuniones">💻 Aulita de Reuniones / Coworking</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-[11px] text-slate-300 font-bold block mb-1">Fecha del Evento</label>
+                <input type="date" id="res-date" value="2026-11-15" class="w-full bg-slate-900 border sys-border rounded px-3 py-2 text-xs text-white">
+              </div>
+              <div>
+                <label class="text-[11px] text-slate-300 font-bold block mb-1">Turno</label>
+                <select id="res-shift" class="w-full bg-slate-900 border sys-border rounded px-3 py-2 text-xs text-white">
+                  <option value="Almuerzo (11:30 a 16:30 hs)">Almuerzo (11:30 a 16:30 hs)</option>
+                  <option value="Cena (19:30 a 01:30 hs)">Cena (19:30 a 01:30 hs)</option>
+                  <option value="Jornada Completa">Jornada Completa</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-[11px] text-slate-300 font-bold block mb-1">Motivo / Camada</label>
+                <input type="text" id="res-reason" placeholder="Ej: Asado Reencuentro GV50" class="w-full bg-slate-900 border sys-border rounded px-3 py-2 text-xs text-white">
+              </div>
+            </div>
+            <div class="flex items-center justify-between border-t sys-border pt-4">
+              <span class="text-xs text-slate-400">Incluye vajilla completa, parrilla, tablones y estacionamiento en Ciudad Universitaria.</span>
+              <button onclick="submitReserva()" class="bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs px-5 py-2.5 rounded-lg shadow transition">
+                Enviar Solicitud a OyE
+              </button>
+            </div>
+          </div>
+
+          <!-- Calendario / Listado de Reservas Próximas -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="reservas-grid">
+            <div class="sys-card p-5 rounded-xl border sys-border">
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded">Confirmada</span>
+                <span class="text-xs text-slate-400">Domingo 08 Nov</span>
+              </div>
+              <h4 class="font-extrabold text-white text-sm">Asado Camadas GV 20, 23 y 25</h4>
+              <div class="text-xs text-slate-300 mt-1">Quincho y Asador Principal · Almuerzo</div>
+              <div class="text-[11px] text-slate-400 mt-2">Responsable: Ing. Luis Del Bel · 32 personas</div>
+            </div>
+
+            <div class="sys-card p-5 rounded-xl border sys-border">
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded">Confirmada</span>
+                <span class="text-xs text-slate-400">Viernes 13 Nov</span>
+              </div>
+              <h4 class="font-extrabold text-white text-sm">Capacitación de Seguridad Operativa</h4>
+              <div class="text-xs text-slate-300 mt-1">Anfiteatro · Turno Tarde (17:00 hs)</div>
+              <div class="text-[11px] text-slate-400 mt-2">Dupla RRHH / RRII · Dictada por Exviajero</div>
+            </div>
+
+            <div class="sys-card p-5 rounded-xl border border-dashed border-teal-500/40 bg-teal-950/20 flex flex-col items-center justify-center text-center p-5 cursor-pointer" onclick="toggleReservaModal()">
+              <div class="text-2xl mb-1">📅</div>
+              <div class="font-extrabold text-white text-xs">Fecha Disponible</div>
+              <div class="text-[11px] text-teal-300 mt-1">Hacé clic para solicitar el Quincho en tu fecha</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ------------------------------------------------------------- -->
+        <!-- SECCIÓN 4: DIRECTORIO Y BANCO DE TALENTOS                     -->
+        <!-- ------------------------------------------------------------- -->
+        <section id="sys-sec-directorio" class="hidden fade-in">
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-5">
+            <div>
+              <h2 class="text-xl font-bold text-white">Directorio de la Comunidad AVEIT</h2>
+              <p class="text-xs text-slate-400 mt-0.5">
+                Buscá exviajeros por camada o encontrá socios activos según sus habilidades y herramientas.
+              </p>
+            </div>
+            <div class="flex items-center gap-2 bg-slate-900 p-1.5 rounded-lg border sys-border self-start">
+              <button onclick="setDirectoryMode('exviajeros')" id="btn-dir-exviajeros" class="px-3.5 py-1.5 rounded text-xs font-extrabold bg-teal-500 text-slate-950 transition">
+                🎓 Exviajeros Graduados (6)
+              </button>
+              <button onclick="setDirectoryMode('activos')" id="btn-dir-activos" class="px-3.5 py-1.5 rounded text-xs font-extrabold text-slate-300 hover:text-white transition">
+                ⚡ Socios Activos por Habilidades (4)
+              </button>
+            </div>
+          </div>
+
+          <div id="dir-filters-exviajeros" class="sys-card p-4 rounded-xl border sys-border grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
+            <div>
+              <label class="text-[11px] text-slate-400 font-bold block mb-1">Buscar Nombre o Empresa</label>
+              <input type="text" id="filter-search" oninput="renderDirectory()" placeholder="Ej: Siemens, Del Bel, Múnich..." class="w-full bg-slate-900 border sys-border rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-teal-400">
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400 font-bold block mb-1">Grupo Viajero (GV)</label>
+              <select id="filter-gv" onchange="renderDirectory()" class="w-full bg-slate-900 border sys-border rounded px-3 py-2 text-xs text-white">
+                <option value="all">Todas las Camadas</option>
+                <option value="GV 20">GV 20 (1988)</option>
+                <option value="GV 35">GV 35 (2003)</option>
+                <option value="GV 40">GV 40 (2008)</option>
+                <option value="GV 48">GV 48 (2016)</option>
+                <option value="GV 52">GV 52 (2020)</option>
+                <option value="GV 55">GV 55 (2023)</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400 font-bold block mb-1">Especialidad</label>
+              <select id="filter-esp" onchange="renderDirectory()" class="w-full bg-slate-900 border sys-border rounded px-3 py-2 text-xs text-white">
+                <option value="all">Todas</option>
+                <option value="Electrónica">Ing. Electrónica</option>
+                <option value="Mecánica">Ing. Mecánica</option>
+                <option value="Industrial">Ing. Industrial</option>
+                <option value="Sistemas">Ing. en Sistemas</option>
+                <option value="Metalúrgica">Ing. Metalúrgica</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400 font-bold block mb-1">País</label>
+              <select id="filter-pais" onchange="renderDirectory()" class="w-full bg-slate-900 border sys-border rounded px-3 py-2 text-xs text-white">
+                <option value="all">Todos</option>
+                <option value="Argentina">🇦🇷 Argentina</option>
+                <option value="Alemania">🇩🇪 Alemania</option>
+                <option value="Italia">🇮🇹 Italia</option>
+                <option value="España">🇪🇸 España</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400 font-bold block mb-1">Predisposición</label>
+              <select id="filter-help" onchange="renderDirectory()" class="w-full bg-slate-900 border sys-border rounded px-3 py-2 text-xs text-white">
+                <option value="all">Todos</option>
+                <option value="visita">🏭 Visitas Técnicas</option>
+                <option value="pasantia">💼 Pasantías / Empleo</option>
+                <option value="sponsor">⭐ Sponsor Gran Rifa</option>
+                <option value="b2b">⚙️ Proveedor B2B</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="grid-dir-exviajeros" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+          <div id="grid-dir-activos" class="hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="grid-activos-cards"></div>
+          </div>
+        </section>
+
+        <!-- ------------------------------------------------------------- -->
+        <!-- SECCIÓN 5: BOLSA LABORAL Y HERRAMIENTAS                       -->
+        <!-- ------------------------------------------------------------- -->
+        <section id="sys-sec-bolsa" class="hidden fade-in">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
+            <div>
+              <h2 class="text-xl font-bold text-white">Bolsa Laboral, Pasantías y Servicios de Socios</h2>
+              <p class="text-xs text-slate-400 mt-0.5">
+                Canal segmentado con fechas de vigencia: sin saturar el grupo general de WhatsApp.
+              </p>
+            </div>
+            <button onclick="togglePublishModal()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs px-4 py-2.5 rounded-lg shadow transition whitespace-nowrap">
+              + NUEVA PUBLICACIÓN
+            </button>
+          </div>
+
+          <div id="bolsa-publish-box" class="hidden sys-card p-5 rounded-xl border-2 border-teal-500/50 mb-6 fade-in">
+            <div class="flex items-center justify-between border-b sys-border pb-3 mb-4">
+              <span class="text-[10px] font-extrabold uppercase text-teal-400" id="form-role-indicator">Publicando en la Red</span>
+              <button onclick="togglePublishModal()" class="text-xs text-slate-400 hover:text-white">✕ Cerrar</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div>
+                <label class="text-[11px] text-slate-300 font-bold block mb-1">Tipo</label>
+                <select id="pub-category" class="w-full bg-slate-900 border sys-border rounded px-3 py-2 text-xs text-white">
+                  <option value="Pasantía / Empleo">💼 Oferta de Pasantía / Empleo</option>
+                  <option value="Servicio / Herramienta Propia">🛠️ Servicio / Herramienta Propia (Ej: Corte Láser, Impresión 3D)</option>
+                  <option value="Proveedor Industrial B2B">⚙️ Búsqueda de Proveedor Industrial B2B</option>
+                </select>
+              </div>
+              <div class="md:col-span-2">
+                <label class="text-[11px] text-slate-300 font-bold block mb-1">Título</label>
+                <input type="text" id="pub-title" placeholder="Título claro de la publicación" class="w-full bg-slate-900 border sys-border rounded px-3 py-2 text-xs text-white">
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+              <div>
+                <label class="text-[11px] text-slate-300 font-bold block mb-1">Audiencia</label>
+                <select id="pub-audience" class="w-full bg-slate-900 border sys-border rounded px-3 py-2 text-xs text-white">
+                  <option value="Toda la Comunidad AVEIT">🌍 Toda la Comunidad</option>
+                  <option value="Solo Socios Activos">🎒 Solo Socios Activos</option>
+                  <option value="Solo Exviajeros">🎓 Solo Exviajeros</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-[11px] text-slate-300 font-bold block mb-1">Inicio</label>
+                <input type="date" id="pub-start" value="2026-10-27" class="w-full bg-slate-900 border sys-border rounded px-3 py-2 text-xs text-white">
+              </div>
+              <div>
+                <label class="text-[11px] text-slate-300 font-bold block mb-1">Fin</label>
+                <input type="date" id="pub-end" value="2026-11-30" class="w-full bg-slate-900 border sys-border rounded px-3 py-2 text-xs text-white">
+              </div>
+              <div class="flex items-end pb-1.5">
+                <label class="flex items-center gap-2 cursor-pointer text-xs text-teal-300 font-semibold select-none">
+                  <input type="checkbox" id="pub-indefinite" onchange="toggleIndefiniteDate()" class="w-4 h-4 accent-teal-500">
+                  <span>Tiempo indeterminado</span>
+                </label>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+              <div class="md:col-span-3">
+                <label class="text-[11px] text-slate-300 font-bold block mb-1">Descripción</label>
+                <input type="text" id="pub-desc" placeholder="Detalles de contacto, condiciones, horarios..." class="w-full bg-slate-900 border sys-border rounded px-3 py-2 text-xs text-white">
+              </div>
+              <button onclick="addNewPost()" class="w-full sys-teal sys-teal-hover text-white font-extrabold text-xs py-2.5 rounded shadow transition uppercase">
+                Publicar
+              </button>
+            </div>
+          </div>
+
+          <div id="bolsa-list" class="space-y-3.5"></div>
+        </section>
+
+        <!-- ------------------------------------------------------------- -->
+        <!-- SECCIÓN 6: VISITAS TÉCNICAS Y CHARLAS                         -->
+        <!-- ------------------------------------------------------------- -->
+        <section id="sys-sec-visitas" class="hidden fade-in">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
+            <div>
+              <span class="text-[10px] font-extrabold uppercase tracking-wider text-purple-400">Articulación con RRII</span>
+              <h2 class="text-xl font-bold text-white">Visitas Técnicas y Charlas</h2>
+              <p class="text-xs text-slate-400 mt-0.5">
+                Catálogo de exviajeros disponibles para abrir las puertas de las plantas donde trabajan o dictar capacitaciones.
+              </p>
+            </div>
+            <button onclick="showToast('Formulario enviado a RRII: Tu empresa/charla quedó registrada')" class="bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs px-4 py-2.5 rounded-lg shadow transition">
+              + OFRECER VISITA O CHARLA
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="sys-card p-5 rounded-xl border sys-border">
+              <span class="text-[10px] font-extrabold uppercase bg-purple-500/20 text-purple-300 px-2.5 py-1 rounded">🇪🇺 Euroviaje</span>
+              <h3 class="text-base font-bold text-white mt-3">Alemania / Italia / España</h3>
+              <p class="text-xs text-slate-300 mt-1.5 leading-relaxed">
+                Contactos internos en plantas como Siemens, Bosch y centros de diseño para recibir al Grupo Viajero.
+              </p>
+              <button onclick="showSysSection('directorio'); document.getElementById('filter-help').value='visita'; renderDirectory();" class="mt-4 text-xs text-teal-400 font-bold hover:underline">Ver referentes →</button>
+            </div>
+
+            <div class="sys-card p-5 rounded-xl border sys-border">
+              <span class="text-[10px] font-extrabold uppercase bg-teal-500/20 text-teal-300 px-2.5 py-1 rounded">🇦🇷 Viaje Anual</span>
+              <h3 class="text-base font-bold text-white mt-3">Córdoba, Bs.As. y el País</h3>
+              <p class="text-xs text-slate-300 mt-1.5 leading-relaxed">
+                Nexo con plantas alimenticias, siderúrgicas, metalúrgicas y de automatización.
+              </p>
+              <button onclick="showToast('Abriendo planilla compartida de Visitas Técnicas')" class="mt-4 text-xs text-teal-400 font-bold hover:underline">Planilla RRII →</button>
+            </div>
+
+            <div class="sys-card p-5 rounded-xl border sys-border">
+              <span class="text-[10px] font-extrabold uppercase bg-sky-500/20 text-sky-300 px-2.5 py-1 rounded">🎙️ Anfiteatro Sede</span>
+              <h3 class="text-base font-bold text-white mt-3">Charlas y Capacitaciones</h3>
+              <p class="text-xs text-slate-300 mt-1.5 leading-relaxed">
+                Workshops técnicos, inserción laboral y experiencias de emprendedores para socios activos.
+              </p>
+              <button onclick="showToast('Postulación enviada a la dupla RRHH-RRII')" class="mt-4 text-xs text-teal-400 font-bold hover:underline">Postular charla →</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ------------------------------------------------------------- -->
+        <!-- SECCIÓN 7: PORTAL DE SPONSORS                                 -->
+        <!-- ------------------------------------------------------------- -->
+        <section id="sys-sec-sponsors" class="hidden fade-in">
+          <div class="bg-gradient-to-r from-amber-950/60 via-slate-900 to-slate-900 border border-amber-500/40 rounded-xl p-6 mb-6">
+            <h2 class="text-2xl font-extrabold text-white">Portal de Sponsors Corporativos de AVEIT</h2>
+            <p class="text-xs sm:text-sm text-slate-300 mt-1 max-w-3xl">
+              Pautá con tu empresa para impulsar la Gran Rifa AVEIT, la Maratón Solidaria y los eventos de Ciudad Universitaria.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="sys-card p-5 rounded-xl border border-amber-500/30 flex flex-col justify-between">
+              <div>
+                <span class="text-[10px] font-extrabold uppercase bg-amber-500/20 text-amber-300 px-2.5 py-1 rounded">Gran Rifa</span>
+                <h4 class="text-base font-extrabold text-white mt-2">Sponsor Revista & Web</h4>
+                <p class="text-xs text-slate-300 mt-1 leading-relaxed">Banner en la revista impresa/digital y presencia destacada en la plataforma web.</p>
+              </div>
+              <button onclick="selectSponsorPlan('Gran Rifa AVEIT + Web')" class="mt-4 w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs py-2 rounded transition uppercase">Elegir Plan</button>
+            </div>
+
+            <div class="sys-card p-5 rounded-xl border sys-border flex flex-col justify-between">
+              <div>
+                <span class="text-[10px] font-extrabold uppercase bg-sky-500/20 text-sky-300 px-2.5 py-1 rounded">Eventos Masivos</span>
+                <h4 class="text-base font-extrabold text-white mt-2">Maratón & Cuna</h4>
+                <p class="text-xs text-slate-300 mt-1 leading-relaxed">Presencia en remeras, arco de llegada, flyers y stand en el Anfiteatro.</p>
+              </div>
+              <button onclick="selectSponsorPlan('Maratón Solidaria / Cuna')" class="mt-4 w-full bg-teal-600 hover:bg-teal-500 text-white font-extrabold text-xs py-2 rounded transition uppercase">Elegir Plan</button>
+            </div>
+
+            <div class="sys-card p-5 rounded-xl border sys-border flex flex-col justify-between">
+              <div>
+                <span class="text-[10px] font-extrabold uppercase bg-purple-500/20 text-purple-300 px-2.5 py-1 rounded">Reclutamiento</span>
+                <h4 class="text-base font-extrabold text-white mt-2">Feria de Empleo</h4>
+                <p class="text-xs text-slate-300 mt-1 leading-relaxed">Prioridad en pasantías y bloque de disertación ante estudiantes.</p>
+              </div>
+              <button onclick="selectSponsorPlan('Feria de Empleo + Red Global')" class="mt-4 w-full bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs py-2 rounded transition uppercase">Elegir Plan</button>
+            </div>
+          </div>
+
+          <div class="sys-card p-5 rounded-xl border sys-border">
+            <h3 class="text-sm font-bold text-white mb-3">Solicitud de Contacto Comercial</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <input type="text" id="sp-company" placeholder="Empresa" class="bg-slate-900 border sys-border rounded px-3 py-2 text-xs text-white">
+              <input type="text" id="sp-plan" placeholder="Plan" class="bg-slate-900 border sys-border rounded px-3 py-2 text-xs text-amber-300 font-semibold">
+              <input type="text" id="sp-contact" placeholder="Contacto (WhatsApp/Mail)" class="bg-slate-900 border sys-border rounded px-3 py-2 text-xs text-white">
+              <button onclick="submitSponsorRequest()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs py-2 rounded shadow transition uppercase">Enviar Solicitud</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ------------------------------------------------------------- -->
+        <!-- SECCIÓN 8: EVENTOS DE AVEIT                                   -->
+        <!-- ------------------------------------------------------------- -->
+        <section id="sys-sec-eventos" class="hidden fade-in">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
+            <div>
+              <h2 class="text-xl font-bold text-white">Eventos y Actividades para Sumarse</h2>
+              <p class="text-xs text-slate-400 mt-0.5">
+                Participá en las actividades de la Sede: Asado Reencuentro, Maratón, Campaña de Socios y charlas.
+              </p>
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+              <button onclick="filterEvents('all')" class="px-3 py-1.5 rounded text-xs font-bold sys-teal text-white">Todos</button>
+              <button onclick="filterEvents('Institucional')" class="px-3 py-1.5 rounded text-xs font-bold sys-card text-slate-300 hover:text-white">Institucionales</button>
+              <button onclick="filterEvents('Social')" class="px-3 py-1.5 rounded text-xs font-bold sys-card text-slate-300 hover:text-white">Sociales</button>
+            </div>
+          </div>
+          <div id="eventos-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </section>
+
+        <!-- ------------------------------------------------------------- -->
+        <!-- SECCIÓN 9: MI PERFIL Y PREFERENCIAS ANTI-SPAM (MEJORADO)      -->
+        <!-- ------------------------------------------------------------- -->
+        <section id="sys-sec-perfil" class="hidden fade-in">
+          <div class="mb-5">
+            <h2 class="text-xl font-bold text-white">Mi Información y Preferencias de Privacidad (Opt-In)</h2>
+            <p class="text-xs text-slate-400 mt-0.5">
+              Administrá tus llaves de privacidad según la Ley 25.326 y configurá tus alertas anti-spam.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="lg:col-span-7 sys-card p-5 rounded-xl border sys-border space-y-4">
+              <h3 class="text-sm font-bold text-white border-b sys-border pb-2">1. Trayectoria y Ubicación</h3>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div class="bg-slate-900/70 p-3 rounded border sys-border">
+                  <div class="text-slate-400 text-[10px]">Nombre</div>
+                  <div class="font-bold text-white mt-0.5" id="prof-name">Lihue Ahian Napoli</div>
+                </div>
+                <div class="bg-slate-900/70 p-3 rounded border sys-border">
+                  <div class="text-slate-400 text-[10px]">Camada</div>
+                  <div class="font-bold text-teal-400 mt-0.5" id="prof-gv">G59 (Socio Activo)</div>
+                </div>
+                <div class="bg-slate-900/70 p-3 rounded border sys-border">
+                  <div class="text-slate-400 text-[10px]">Carrera</div>
+                  <div class="font-bold text-white mt-0.5">Ing. Electrónica</div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div>
+                  <label class="text-[11px] text-slate-400 block mb-1">Empresa Actual</label>
+                  <input type="text" value="AVEIT / Proyecto Industrial" class="w-full bg-slate-900 border sys-border rounded px-3 py-2 text-white">
+                </div>
+                <div>
+                  <label class="text-[11px] text-slate-400 block mb-1">Cargo / Especialidad</label>
+                  <input type="text" value="Sistemas Embebidos & IoT" class="w-full bg-slate-900 border sys-border rounded px-3 py-2 text-white">
+                </div>
+                <div>
+                  <label class="text-[11px] text-slate-400 block mb-1">Ciudad / País</label>
+                  <input type="text" value="Córdoba, Argentina" class="w-full bg-slate-900 border sys-border rounded px-3 py-2 text-white">
+                </div>
+                <div>
+                  <label class="text-[11px] text-slate-400 block mb-1">LinkedIn</label>
+                  <input type="text" value="linkedin.com/in/lihue-napoli" class="w-full bg-slate-900 border sys-border rounded px-3 py-2 text-teal-300">
+                </div>
+              </div>
+              <button onclick="showToast('Perfil actualizado correctamente')" class="sys-teal sys-teal-hover text-white font-bold text-xs px-5 py-2.5 rounded shadow transition">
+                Guardar Cambios
+              </button>
+            </div>
+
+            <!-- Llaves de Privacidad y Alertas Anti-Spam -->
+            <div class="lg:col-span-5 sys-card p-5 rounded-xl border border-teal-500/40 space-y-4">
+              <h3 class="text-sm font-bold text-white border-b sys-border pb-2">2. Privacidad y Alertas Anti-Spam</h3>
+
+              <label class="flex items-start justify-between gap-3 p-3 rounded-lg bg-slate-900/70 border sys-border cursor-pointer">
+                <div>
+                  <div class="text-xs font-bold text-white">Pin anónimo en el Mapa Mundi público</div>
+                  <div class="text-[11px] text-slate-400">Suma tu ciudad sin exponer tu identidad afuera.</div>
+                </div>
+                <input type="checkbox" checked class="w-4 h-4 accent-teal-500 mt-1">
+              </label>
+
+              <label class="flex items-start justify-between gap-3 p-3 rounded-lg bg-amber-950/30 border border-amber-500/40 cursor-pointer">
+                <div>
+                  <div class="text-xs font-bold text-amber-300">Mostrar Teléfono / WhatsApp</div>
+                  <div class="text-[11px] text-slate-300">Oculto por defecto. Activalo si querés contacto directo.</div>
+                </div>
+                <input type="checkbox" id="switch-phone-optin" onchange="toggleMyPhoneVisibility()" class="w-4 h-4 accent-amber-500 mt-1">
+              </label>
+
+              <div class="pt-2 border-t sys-border">
+                <span class="text-[10px] font-bold uppercase text-teal-400 block mb-2">Preferencias de Notificaciones por Mail:</span>
+                <div class="space-y-2 text-xs text-slate-300">
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked class="accent-teal-500">
+                    <span>Avisarme de ofertas laborales y pasantías</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked class="accent-teal-500">
+                    <span>Avisarme de asados o juntadas de mi camada</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" class="accent-teal-500">
+                    <span>Avisarme cuando el Euroviaje pase por mi país</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
     </div>
-    <div id="footerStatus">Listo para conectar</div>
-  </footer>
+  </div>
 
-<script>
-  let port = null;
-  let reader = null;
-  let keepReading = false;
-  let isPaused = false;
+  <!-- ===================================================================== -->
+  <!-- VISTA 3: RESUMEN DE CASOS WIN-WIN                                     -->
+  <!-- ===================================================================== -->
+  <div id="view-pitch" class="hidden flex-1 py-12 px-6 bg-slate-100 fade-in">
+    <div class="max-w-6xl mx-auto">
+      <div class="bg-white rounded-2xl p-8 shadow-md border border-slate-200">
+        <span class="text-xs font-extrabold uppercase tracking-widest text-teal-600">Esquema Integral</span>
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">Matriz de Valor Win-Win de la Red Global</h2>
+        <div class="overflow-x-auto mt-6">
+          <table class="w-full text-left border-collapse text-xs sm:text-sm">
+            <thead>
+              <tr class="bg-slate-900 text-white">
+                <th class="p-3.5 rounded-tl-lg">Módulo</th>
+                <th class="p-3.5">Para el Socio Activo</th>
+                <th class="p-3.5">Para el Exviajero</th>
+                <th class="p-3.5 rounded-tr-lg">Para AVEIT (Institución)</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 text-slate-700">
+              <tr>
+                <td class="p-3.5 font-bold">1. Web Pública & 3D</td>
+                <td class="p-3.5">Muestra el alcance en la Campaña de Socios.</td>
+                <td class="p-3.5">Refleja su huella sin exponer datos privados.</td>
+                <td class="p-3.5 text-teal-700 font-bold">Posicionamiento internacional y captación.</td>
+              </tr>
+              <tr class="bg-slate-50">
+                <td class="p-3.5 font-bold">2. Cápsula Histórica</td>
+                <td class="p-3.5">Conoce la historia viva y el legado del viaje.</td>
+                <td class="p-3.5">Reconocimiento y archivo de su camada.</td>
+                <td class="p-3.5 text-teal-700 font-bold">Resguardo patrimonial digitalizado.</td>
+              </tr>
+              <tr>
+                <td class="p-3.5 font-bold">3. Bolsa & Servicios</td>
+                <td class="p-3.5">Pasantías y ofrece sus herramientas (corte láser, 3D).</td>
+                <td class="p-3.5">Busca talento de confianza y proveedores B2B.</td>
+                <td class="p-3.5 text-teal-700 font-bold">Menos saturación en WhatsApp y retención.</td>
+              </tr>
+              <tr class="bg-slate-50">
+                <td class="p-3.5 font-bold">4. Sponsors & Rifa</td>
+                <td class="p-3.5">Contactos calientes para financiar el viaje.</td>
+                <td class="p-3.5">Pauta publicidad y compra rifas digitalmente.</td>
+                <td class="p-3.5 text-teal-700 font-bold">Nuevos ingresos directos para la Sede.</td>
+              </tr>
+              <tr>
+                <td class="p-3.5 font-bold">5. Reserva de Quincho</td>
+                <td class="p-3.5">Uso ordenado de la Sede con OyE.</td>
+                <td class="p-3.5">Puede volver a la Sede a comer un asado.</td>
+                <td class="p-3.5 text-teal-700 font-bold">Comunidad viva y fondos de mantenimiento.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  const PUNTOS_BASE = 200;
-  let bufferA = new Array(PUNTOS_BASE).fill(2048);
-  let bufferB = new Array(PUNTOS_BASE).fill(2048);
-  let bufferOpto = new Array(PUNTOS_BASE).fill(0);
+  <!-- ===================================================================== -->
+  <!-- MODAL 1: ASISTENTE DE PASE A EXVIAJERO (ONBOARDING AUTOMÁTICO)        -->
+  <!-- ===================================================================== -->
+  <div id="modal-onboarding" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-teal-500/50 rounded-2xl max-w-lg w-full p-6 text-white shadow-2xl relative fade-in">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-4">
+        <span class="text-xs font-black uppercase text-teal-400">Protocolo Fin de Viaje</span>
+        <button onclick="closeOnboardingModal()" class="text-slate-400 hover:text-white text-sm">✕</button>
+      </div>
+      <div class="text-center mb-6">
+        <div class="w-12 h-12 bg-teal-500 text-slate-950 rounded-full flex items-center justify-center text-2xl mx-auto mb-3 font-bold">🎓</div>
+        <h3 class="text-lg font-bold text-white">¡Felicitaciones por culminar el Viaje Técnico!</h3>
+        <p class="text-xs text-slate-300 mt-1">
+          Completá este paso para migrar tu cuenta de Socio Activo a Exviajero. Se archivarán tus obligaciones de sede y pasarás a integrar la Red Global.
+        </p>
+      </div>
+      <div class="space-y-3 text-xs mb-6">
+        <div>
+          <label class="text-slate-400 block mb-1 font-semibold">Ciudad y País de Residencia Actual</label>
+          <input type="text" value="Córdoba, Argentina" class="w-full bg-slate-800 border sys-border rounded px-3 py-2 text-white">
+        </div>
+        <div>
+          <label class="text-slate-400 block mb-1 font-semibold">Empresa / Proyecto Actual</label>
+          <input type="text" placeholder="Ej: Renault, Globant, Emprendimiento propio" class="w-full bg-slate-800 border sys-border rounded px-3 py-2 text-white">
+        </div>
+        <label class="flex items-center gap-2 cursor-pointer text-slate-300 pt-1">
+          <input type="checkbox" checked class="accent-teal-500 w-4 h-4">
+          <span>Habilitar mi perfil para recibir consultas de viaje y mentoreo</span>
+        </label>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="confirmOnboarding()" class="w-full bg-teal-500 hover:bg-teal-400 text-slate-950 font-black text-xs py-3 rounded-lg shadow uppercase tracking-wider">
+          Completar Transición a Exviajero
+        </button>
+      </div>
+    </div>
+  </div>
 
-  const canvas = document.getElementById('scopeCanvas');
-  const ctx = canvas.getContext('2d');
-  const btnConectar = document.getElementById('btnConectar');
-  const btnPausa = document.getElementById('btnPausa');
-  const selTimebase = document.getElementById('selTimebase');
-  const selScaleV = document.getElementById('selScaleV');
-  const chkShowA = document.getElementById('chkShowA');
-  const chkShowB = document.getElementById('chkShowB');
-  const chkShowDiff = document.getElementById('chkShowDiff');
-  const chkShowOpto = document.getElementById('chkShowOpto');
-  const statFPS = document.getElementById('statFPS');
-  const footerStatus = document.getElementById('footerStatus');
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white border-l-4 border-teal-400 px-4 py-3 rounded-lg shadow-2xl text-xs font-bold hidden z-50 max-w-sm"></div>
 
-  const mVppA = document.getElementById('mVppA');
-  const mVdcA = document.getElementById('mVdcA');
-  const mFreqA = document.getElementById('mFreqA');
-
-  const mVppB = document.getElementById('mVppB');
-  const mVdcB = document.getElementById('mVdcB');
-  const mFreqB = document.getElementById('mFreqB');
-
-  const mVppDiff = document.getElementById('mVppDiff');
-  const mPhaseDiff = document.getElementById('mPhaseDiff');
-  const mFreqOpto = document.getElementById('mFreqOpto');
-
-  const fieldCard = document.getElementById('fieldCard');
-  const fieldVal = document.getElementById('fieldVal');
-
-  function resizeCanvas() {
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * window.devicePixelRatio;
-    canvas.height = rect.height * window.devicePixelRatio;
-  }
-  window.addEventListener('resize', resizeCanvas);
-  resizeCanvas();
-
-  let frames = 0;
-  setInterval(() => { statFPS.innerText = frames + " FPS"; frames = 0; }, 1000);
-
-  btnPausa.addEventListener('click', () => {
-    isPaused = !isPaused;
-    btnPausa.innerText = isPaused ? "▶ Reanudar" : "⏸ Pausar Traza";
-  });
-
-  btnConectar.addEventListener('click', async () => {
-    if (port) {
-      keepReading = false;
-      if (reader) { try { await reader.cancel(); } catch(e){} }
-      if (port) { try { await port.close(); } catch(e){} }
-      port = null;
-      btnConectar.innerText = "🔌 Conectar ST-Link";
-      btnConectar.className = "btn-primary";
-      footerStatus.innerText = "Desconectado.";
-      return;
+  <!-- ===================================================================== -->
+  <!-- JAVASCRIPT COMPLETO DE INTERACTIVIDAD Y DATOS                         -->
+  <!-- ===================================================================== -->
+  <script>
+    function switchMainTab(tab) {
+      ['public', 'sys', 'pitch'].forEach(t => {
+        document.getElementById('view-' + t).classList.add('hidden');
+        document.getElementById('tab-btn-' + t).className = 'px-3 py-1.5 rounded text-xs font-bold transition bg-slate-800 text-slate-300 hover:bg-slate-700';
+      });
+      document.getElementById('view-' + tab).classList.remove('hidden');
+      document.getElementById('tab-btn-' + tab).className = 'px-3 py-1.5 rounded text-xs font-bold transition bg-teal-500 text-slate-950 shadow';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    try {
-      port = await navigator.serial.requestPort();
-      await port.open({ baudRate: 115200, bufferSize: 16384 });
-      btnConectar.innerText = "🔌 Desconectar";
-      btnConectar.className = "btn-connected";
-      footerStatus.innerText = "Conectado al ST-Link (115200 bps)";
-      keepReading = true;
-      leerSerial();
-    } catch (err) {
-      alert("Error al conectar: " + err.message);
+    // GLOBO 3D Y MAPA 2D
+    const hubs = [
+      {
+        id: 0, name: "Córdoba Capital y Gran Córdoba", tag: "ARGENTINA · NODO CENTRAL", count: "+420",
+        lat: -31.4, lon: -64.2,
+        desc: "Sede central de AVEIT en UTN-FRC. Gran concentración de fundadores de PyMEs industriales, fábricas metalúrgicas y software.",
+        industries: ["Metalúrgica y Autopartes", "Software & IT", "Automatización Industrial"],
+        impact: "Visitas técnicas locales, pasantías y patrocinio de la Gran Rifa."
+      },
+      {
+        id: 1, name: "Buenos Aires, Campana y Rosario", tag: "ARGENTINA · POLO INDUSTRIAL", count: "+95",
+        lat: -34.6, lon: -58.4,
+        desc: "Graduados en plantas siderúrgicas, alimenticias y corporaciones multinacionales.",
+        industries: ["Siderurgia & Oil/Gas", "Alimenticia", "Logística Portuaria"],
+        impact: "Pilar fundamental para las paradas del Viaje Anual de Estudios."
+      },
+      {
+        id: 2, name: "Alemania (Múnich, Stuttgart, Berlín)", tag: "EUROPA · CENTRO TÉCNICO", count: "+38",
+        lat: 48.1, lon: 11.5,
+        desc: "Especialistas en desarrollo automotriz, mecatrónica y automatización (Siemens, BMW).",
+        industries: ["Automotriz & Robótica", "I+D", "Energía Renovable"],
+        impact: "Recepción de grupos viajeros en Alemania durante el Euroviaje."
+      },
+      {
+        id: 3, name: "España & Italia (Madrid, Turín)", tag: "EUROPA · DISEÑO & TECH", count: "+54",
+        lat: 41.9, lon: 6.0,
+        desc: "Comunidad de ingenieros en consultoras, automotrices y centros de investigación.",
+        industries: ["Diseño Mecánico", "Consultoría Cloud", "Telecomunicaciones"],
+        impact: "Apoyo logístico y visitas técnicas en el sur de Europa."
+      },
+      {
+        id: 4, name: "Países Bajos & Bélgica", tag: "EUROPA · INNOVACIÓN", count: "+14",
+        lat: 52.1, lon: 5.1,
+        desc: "Foco en semiconductores, logística y tecnología agropecuaria.",
+        industries: ["Semiconductores", "Logística Portuaria", "AgTech"],
+        impact: "Vínculo histórico donde se adquirían los vehículos del viaje."
+      },
+      {
+        id: 5, name: "Estados Unidos & Resto", tag: "GLOBAL", count: "+26",
+        lat: 34.0, lon: -98.0,
+        desc: "Ingenieros en empresas de software, minería e infraestructura.",
+        industries: ["Cloud & Big Tech", "Minería", "Gestión de Proyectos"],
+        impact: "Charlas magistrales y asesoramiento técnico a distancia."
+      }
+    ];
+
+    const worldDots = [
+      {lat:-31.4, lon:-64.2}, {lat:-34.6, lon:-58.4}, {lat:-32.9, lon:-60.6}, {lat:-33.4, lon:-70.6}, {lat:-23.5, lon:-46.6},
+      {lat:40.7, lon:-74.0}, {lat:37.7, lon:-122.4}, {lat:48.1, lon:11.5}, {lat:41.9, lon:12.4}, {lat:40.4, lon:-3.7}, {lat:52.3, lon:4.9}
+    ];
+
+    let mapMode = '3d', globeYaw = -0.55, globePitch = -0.15, isDraggingGlobe = false, lastMouseX = 0, lastMouseY = 0, autoRotate = true, selectedHubIndex = 0, projectedHubs = [];
+    const canvas = document.getElementById('globeCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function setMapMode(m) {
+      mapMode = m;
+      document.getElementById('btn-map-3d').className = m === '3d' ? 'px-3 py-1.5 rounded text-xs font-bold bg-slate-900 text-white shadow transition' : 'px-3 py-1.5 rounded text-xs font-bold text-slate-600 hover:text-slate-900 transition';
+      document.getElementById('btn-map-2d').className = m === '2d' ? 'px-3 py-1.5 rounded text-xs font-bold bg-slate-900 text-white shadow transition' : 'px-3 py-1.5 rounded text-xs font-bold text-slate-600 hover:text-slate-900 transition';
     }
-  });
 
-  async function leerSerial() {
-    reader = port.readable.getReader();
-    const decoder = new TextDecoder();
-    let acumulador = "";
+    function focusHub(i) {
+      selectedHubIndex = i;
+      const h = hubs[i];
+      autoRotate = false;
+      globeYaw = (-h.lon * Math.PI / 180);
+      globePitch = (h.lat * Math.PI / 180) * 0.35;
+      document.getElementById('hub-region-tag').innerText = h.tag;
+      document.getElementById('hub-title').innerText = h.name;
+      document.getElementById('hub-count').innerText = h.count;
+      document.getElementById('hub-desc').innerText = h.desc;
+      document.getElementById('hub-impact').innerText = h.impact;
+      document.getElementById('hub-industries').innerHTML = h.industries.map(ind => `<span class="bg-slate-800 text-slate-200 text-xs px-2.5 py-1 rounded border border-slate-700">${ind}</span>`).join('');
+    }
 
-    try {
-      while (keepReading) {
-        const { value, done } = await reader.read();
-        if (done) break;
+    function drawMap() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      projectedHubs = [];
+      if (mapMode === '3d') {
+        if (autoRotate && !isDraggingGlobe) globeYaw += 0.0035;
+        const cx = canvas.width / 2, cy = canvas.height / 2, r = 148;
+        const grad = ctx.createRadialGradient(cx - 30, cy - 30, r * 0.2, cx, cy, r * 1.15);
+        grad.addColorStop(0, '#1e293b');
+        grad.addColorStop(0.85, '#0f172a');
+        grad.addColorStop(1, 'rgba(38,166,154,0.2)');
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(45,212,191,0.4)';
+        ctx.stroke();
 
-        if (value) {
-          acumulador += decoder.decode(value, { stream: true });
-          let lineas = acumulador.split("\n");
-          acumulador = lineas.pop();
-
-          for (let linea of lineas) {
-            linea = linea.trim();
-            if (!linea) continue;
-
-            let partes = linea.split(",");
-            /* Trama: SIGNO, FASE, FREQ_OPTO, HEX_OPTO, 200 de A, 200 de B (Total: 4 + 400 = 404 partes) */
-            if (partes.length >= 404) {
-              let sign = parseInt(partes[0]);
-              let phaseMCU = parseFloat(partes[1]);
-              let freqOpto = parseFloat(partes[2]);
-              let hexOpto = partes[3];
-
-              let valoresA = partes.slice(4, 204).map(Number);
-              let valoresB = partes.slice(204, 404).map(Number);
-
-              if (!isPaused) {
-                bufferA = valoresA;
-                bufferB = valoresB;
-
-                let realOpto = [];
-                for (let i = 0; i < 200; i++) {
-                  let byteIndex = Math.floor(i / 8);
-                  let bitIndex = i % 8;
-                  let byteVal = parseInt(hexOpto.substr(byteIndex * 2, 2), 16);
-                  let bit = (byteVal >> bitIndex) & 1;
-                  realOpto.push(bit ? 4095 : 0);
-                }
-                bufferOpto = realOpto;
-
-                actualizarMetricas(bufferA, bufferB, freqOpto, sign);
-              }
-            }
+        worldDots.forEach(d => {
+          const p = project3D(d.lat, d.lon, cx, cy, r);
+          if (p.z > 0) {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(56,189,248,0.6)';
+            ctx.fill();
           }
-        }
+        });
+
+        hubs.forEach((h, idx) => {
+          const p = project3D(h.lat, h.lon, cx, cy, r);
+          if (p.z > -0.05) {
+            projectedHubs.push({ idx, x: p.x, y: p.y });
+            const isSel = idx === selectedHubIndex;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, isSel ? 12 : 8, 0, Math.PI * 2);
+            ctx.fillStyle = isSel ? 'rgba(245,158,11,0.35)' : 'rgba(45,212,191,0.25)';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, isSel ? 5.5 : 4, 0, Math.PI * 2);
+            ctx.fillStyle = isSel ? '#fbbf24' : '#2dd4bf';
+            ctx.fill();
+            ctx.font = 'bold 11px Montserrat, sans-serif';
+            ctx.fillStyle = isSel ? '#fde68a' : '#e2e8f0';
+            ctx.fillText(h.count, p.x + 8, p.y + 4);
+          }
+        });
+      } else {
+        const w = canvas.width, h = canvas.height;
+        const to2D = (lat, lon) => ({ x: ((lon + 150) / 310) * (w - 80) + 40, y: ((70 - lat) / 130) * (h - 60) + 30 });
+        hubs.forEach((hb, idx) => {
+          const p = to2D(hb.lat, hb.lon);
+          projectedHubs.push({ idx, x: p.x, y: p.y });
+          const isSel = idx === selectedHubIndex;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, isSel ? 11 : 7, 0, Math.PI * 2);
+          ctx.fillStyle = isSel ? 'rgba(245,158,11,0.3)' : 'rgba(45,212,191,0.25)';
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 4.5, 0, Math.PI * 2);
+          ctx.fillStyle = isSel ? '#fbbf24' : '#2dd4bf';
+          ctx.fill();
+          ctx.font = 'bold 11px Montserrat, sans-serif';
+          ctx.fillStyle = isSel ? '#fde68a' : '#ffffff';
+          ctx.fillText(`${hb.name.split(' ')[0]} (${hb.count})`, p.x + 8, p.y + 4);
+        });
       }
-    } catch (e) {
-      console.warn("Serial desconectado:", e);
-    } finally {
-      reader.releaseLock();
+      requestAnimationFrame(drawMap);
     }
-  }
 
-  function calcularEstadisticas(buf) {
-    let min = Math.min(...buf);
-    let max = Math.max(...buf);
-    let avg = buf.reduce((a, b) => a + b, 0) / buf.length;
-    let vpp = ((max - min) * 3.3) / 4095.0;
-    let vdc = (avg * 3.3) / 4095.0;
-    return { min, max, vpp, vdc };
-  }
-
-  function actualizarMetricas(bA, bB, fOpto, sign) {
-    let sA = calcularEstadisticas(bA);
-    let sB = calcularEstadisticas(bB);
-
-    mVppA.innerText = sA.vpp.toFixed(2) + " V";
-    mVdcA.innerText = sA.vdc.toFixed(2) + " V";
-    mFreqA.innerText = "100.0 Hz";
-
-    mVppB.innerText = sB.vpp.toFixed(2) + " V";
-    mVdcB.innerText = sB.vdc.toFixed(2) + " V";
-    mFreqB.innerText = "100.0 Hz";
-
-    /* Amplitud de la resta diferencial (A - B) */
-    let diff = [];
-    for (let i = 0; i < PUNTOS_BASE; i++) {
-      diff.push(bA[i] - bB[i]);
+    function project3D(latDeg, lonDeg, cx, cy, r) {
+      const lat = latDeg * Math.PI / 180, lon = lonDeg * Math.PI / 180 + globeYaw;
+      const x0 = Math.cos(lat) * Math.sin(lon), y0 = Math.sin(lat), z0 = Math.cos(lat) * Math.cos(lon);
+      const y1 = y0 * Math.cos(globePitch) - z0 * Math.sin(globePitch);
+      const z1 = y0 * Math.sin(globePitch) + z0 * Math.cos(globePitch);
+      return { x: cx + x0 * r, y: cy - y1 * r, z: z1 };
     }
-    let minD = Math.min(...diff);
-    let maxD = Math.max(...diff);
-    let vppDiff = ((maxD - minD) * 3.3) / 4095.0;
-    mVppDiff.innerText = vppDiff.toFixed(2) + " V";
 
-    mPhaseDiff.innerText = "180.0° (Contrafase)";
-    mFreqOpto.innerText = (fOpto > 0) ? fOpto.toFixed(1) + " Hz" : "0.0 Hz";
+    canvas.addEventListener('mousedown', e => { isDraggingGlobe = true; autoRotate = false; lastMouseX = e.clientX; lastMouseY = e.clientY; });
+    window.addEventListener('mouseup', () => isDraggingGlobe = false);
+    window.addEventListener('mousemove', e => {
+      if (!isDraggingGlobe || mapMode !== '3d') return;
+      globeYaw += (e.clientX - lastMouseX) * 0.008;
+      globePitch = Math.max(-0.8, Math.min(0.8, globePitch + (e.clientY - lastMouseY) * 0.006));
+      lastMouseX = e.clientX; lastMouseY = e.clientY;
+    });
+    canvas.addEventListener('click', e => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const my = (e.clientY - rect.top) * (canvas.height / rect.height);
+      projectedHubs.forEach(ph => {
+        if (Math.hypot(ph.x - mx, ph.y - my) < 18) focusHub(ph.idx);
+      });
+    });
 
-    if (sign >= 2000) {
-      fieldCard.className = "field-status-box status-pos";
-      fieldVal.innerText = "CAMPO (+E)";
-    } else {
-      fieldCard.className = "field-status-box status-neg";
-      fieldVal.innerText = "CAMPO (-E)";
+    // SISTEMA INTERNO: CAMBIO DE ROL
+    let currentSysRole = 'activo';
+    function setSysRole(role) {
+      currentSysRole = role;
+      const isAct = role === 'activo';
+      document.getElementById('btn-role-activo').className = isAct ? 'px-3 py-1.5 rounded text-xs font-extrabold transition bg-teal-500 text-slate-950 shadow' : 'px-3 py-1.5 rounded text-xs font-extrabold transition text-slate-300 hover:bg-slate-800';
+      document.getElementById('btn-role-exviajero').className = !isAct ? 'px-3 py-1.5 rounded text-xs font-extrabold transition bg-amber-400 text-slate-950 shadow' : 'px-3 py-1.5 rounded text-xs font-extrabold transition text-slate-300 hover:bg-slate-800';
+      document.getElementById('role-subtitle-banner').innerText = isAct ? 'Modo Socio Activo: obligaciones de sede + Red Global' : 'Modo Exviajero: networking, pasantías, quincho y rifas';
+      document.getElementById('top-user-badge').innerText = isAct ? '👤 LIHUE AHIAN (G59)' : '🎓 ING. MARTÍN (GV50)';
+      document.getElementById('badge-role-menu').innerText = isAct ? 'G59' : 'GV50';
+
+      document.getElementById('sidebar-obligaciones-activo').classList.toggle('hidden', !isAct);
+      document.getElementById('sidebar-nota-exviajero').classList.toggle('hidden', isAct);
+      document.getElementById('dash-content-activo').classList.toggle('hidden', !isAct);
+      document.getElementById('dash-content-exviajero').classList.toggle('hidden', isAct);
+
+      document.getElementById('prof-name').innerText = isAct ? 'Lihue Ahian Napoli' : 'Ing. Martín Gómez';
+      document.getElementById('prof-gv').innerText = isAct ? 'G59 (Socio Activo)' : 'GV 50 (Exviajero)';
+
+      renderDirectory();
+      renderBolsa();
+      renderEventos();
+      renderCapsula();
+      showToast(isAct ? 'Simulando vista como Socio Activo (Lihue G59)' : 'Simulando vista como Exviajero (GV50)');
     }
-  }
 
-  function dibujar() {
-    frames++;
-    const w = canvas.width;
-    const h = canvas.height;
+    function showSysSection(sec) {
+      ['dashboard', 'capsula', 'quincho', 'directorio', 'bolsa', 'visitas', 'sponsors', 'eventos', 'perfil'].forEach(s => {
+        const el = document.getElementById('sys-sec-' + s);
+        if (el) el.classList.add('hidden');
+        const navBtn = document.getElementById('nav-' + s);
+        if (navBtn) navBtn.className = 'w-full flex items-center justify-between px-3 py-2.5 rounded text-xs font-bold text-slate-300 hover:bg-slate-800 transition';
+      });
+      const target = document.getElementById('sys-sec-' + sec);
+      if (target) target.classList.remove('hidden');
+      const activeNav = document.getElementById('nav-' + sec);
+      if (activeNav) activeNav.className = 'w-full flex items-center justify-between px-3 py-2.5 rounded text-xs font-bold transition sys-teal text-white shadow';
+      document.getElementById('sys-url-indicator').innerText = `aveit.frc.utn.edu.ar/aveit/sys/${sec}`;
+    }
 
-    ctx.clearRect(0, 0, w, h);
-
-    const cols = 10;
-    const rows = 8;
-    const dx = w / cols;
-    const dy = h / rows;
-
-    /* Grilla estilo Tektronix */
-    ctx.strokeStyle = "#161d2d";
-    ctx.lineWidth = 1;
-    for (let x = dx; x < w; x += dx) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
-    for (let y = dy; y < h; y += dy) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
-
-    ctx.strokeStyle = "#232e47";
-    ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(w / 2, 0); ctx.lineTo(w / 2, h); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w / 2, h); ctx.stroke();
-
-    /* Nivel central de 1.650 V (Masa Virtual) */
-    const midY = h / 2;
-    ctx.strokeStyle = "rgba(148, 163, 184, 0.45)";
-    ctx.setLineDash([4, 4]);
-    ctx.beginPath(); ctx.moveTo(0, midY); ctx.lineTo(w, midY); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = "#94a3b8";
-    ctx.font = "11px monospace";
-    ctx.fillText("Vmedio = 1.650 V (Masa Virtual)", 15, midY - 6);
-
-    const msDiv = parseFloat(selTimebase.value);
-    const scaleV = parseFloat(selScaleV.value);
-
-    /* 2.50 ms/div * 10 div = 25 ms = 250 muestras (a 10 kSPS) */
-    const muestrasPantalla = Math.min(200, Math.round((msDiv * 10) / 0.1));
-
-    const mapY = (counts) => (h / 2) - (((counts * 3.3 / 4095.0) - 1.65) / scaleV) * dy;
-
-    /* 1. Traza Sincronismo PA8 (Verde) */
-    if (chkShowOpto.checked && bufferOpto.length > 0) {
-      ctx.strokeStyle = "#00ff88";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      for (let i = 0; i < muestrasPantalla; i++) {
-        let x = (i / (muestrasPantalla - 1)) * w;
-        let y = mapY(bufferOpto[i]);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
+    // DATOS DE CÁPSULA HISTÓRICA POR CAMADA
+    const capsulaData = {
+      GV20: {
+        year: 1988, name: "Grupo Viajero 20", vehicle: "Combi VW T2 armada en Sede",
+        km: "24.500 km recorridos en 98 días",
+        itinerary: "Holanda, Alemania, Suiza, Italia, Francia, España",
+        plants: "Siemens (Múnich), Fiat (Turín), Robert Bosch (Stuttgart), CERN (Ginebra)",
+        quote: "AVEIT para mí significó la oportunidad de proyectar el gran esfuerzo de la carrera en un proyecto de vida profesional y de amistad eterna.",
+        authorQuote: "Ing. Luis Del Bel (GV 20)",
+        roster: ["Luis Del Bel (Mec)", "Carlos Gómez (Elect)", "Héctor Rossi (Metal)", "Jorge Martos (Elect)", "Raúl Viano (Mec)", "Darío Silvestri (Elect)"]
+      },
+      GV23: {
+        year: 1991, name: "Grupo Viajero 23", vehicle: "Combi acondicionada",
+        km: "26.000 km en 105 días",
+        itinerary: "Alemania, Austria, Italia, Francia, Reino Unido, Países Bajos",
+        plants: "Bayer, Mercedes-Benz, Renault Boulogne, Philips Eindhoven",
+        quote: "El viaje fue el destino soñado, pero el trayecto de 6 años para llegar a él fue algo más espectacular, donde aprendí muchísimo y obtuve grandes amigos.",
+        authorQuote: "Ing. Reinaldo Virovoy (GV 23)",
+        roster: ["Reinaldo Virovoy", "Gustavo Peralta", "Eduardo Molina", "Marcelo Ferreyra", "Sergio Domínguez"]
+      },
+      GV35: {
+        year: 2003, name: "Grupo Viajero 35", vehicle: "Motorhomes alquilados en Frankfurt",
+        km: "22.000 km",
+        itinerary: "Alemania, República Checa, Italia, España, Francia",
+        plants: "Volkswagen Wolfsburg, Ducati Bologna, Airbus Toulouse",
+        quote: "Gestionar las rifas en plena crisis del 2001 nos enseñó más de economía e ingeniería que cualquier manual.",
+        authorQuote: "Ing. Roberto Iñiguez (GV 35)",
+        roster: ["Roberto Iñiguez", "Julián Soria", "Marcos Rinaldi", "Esteban Quinteros", "Federico Luque"]
+      },
+      GV43: {
+        year: 2011, name: "Grupo Viajero 43", vehicle: "Motorhomes Euro-Caravan",
+        km: "27 países recorridos",
+        itinerary: "Ruta Nórdica y Europa Central",
+        plants: "ASML, BMW Múnich, Ferrari Maranello, Festo",
+        quote: "La institución te empuja a recorrer el mundo; descubrís que tomar decisiones para la Asociación te da un valor que no se incorpora a través de un pizarrón.",
+        authorQuote: "Jonatan Panozzo Zénere (GV 43)",
+        roster: ["Jonatan Panozzo", "Leandro Vaira", "Sebastián Bossio", "Matías Cravero", "Gonzalo Ruiz"]
+      },
+      GV48: {
+        year: 2016, name: "Grupo Viajero 48", vehicle: "Flota Motorhomes 6 plazas",
+        km: "21.500 km en 100 días",
+        itinerary: "Europa Occidental y Reino Unido",
+        plants: "Airbus Hamburgo, SEAT Martorell, ABB Zurich",
+        quote: "Hoy desde Múnich sigo conectado con cada camada que viaja a Alemania.",
+        authorQuote: "Ing. Nicolás Fanin (GV 48)",
+        roster: ["Nicolás Fanin", "Facundo Gómez", "Ignacio Torres", "Emiliano Zapata", "Lucas Bordese"]
+      },
+      GV50: {
+        year: 2018, name: "Grupo Viajero 50 (Bodas de Oro AVEIT)", vehicle: "Motorhomes Fiat Ducato",
+        km: "23.000 km",
+        itinerary: "Circuito 50 Aniversario por 22 países",
+        plants: "Siemens, Pirelli, Bosch, Porsche Leipzig",
+        quote: "Llegar a la sede de la UTN en el cincuentenario fue un orgullo que nos marcó la carrera.",
+        authorQuote: "Ing. Martín Gómez (GV 50)",
+        roster: ["Martín Gómez", "Guillermo Moreno (H)", "Gonzalo Alvarez", "Santiago Rossi", "Nicolás Barón"]
+      },
+      GV58: {
+        year: 2025, name: "Grupo Viajero 58", vehicle: "Motorhomes de última generación",
+        km: "100 días por Europa",
+        itinerary: "Francia, Alemania, Italia, Países Bajos, España",
+        plants: "ASML Eindhoven, Siemens Múnich, Airbus Toulouse",
+        quote: "La red de exviajeros nos abrió puertas en cada ciudad que paramos.",
+        authorQuote: "Camada GV 58 (Egresada)",
+        roster: ["Florencia Tomasi", "Cata Oliveda", "Ramiro Enchuste", "Alejandro Urán", "Francisco Figueroa"]
       }
-      ctx.stroke();
+    };
+
+    function renderCapsula() {
+      const gvKey = document.getElementById('select-capsula-gv').value;
+      const data = capsulaData[gvKey] || capsulaData.GV20;
+      const container = document.getElementById('capsula-content');
+
+      container.innerHTML = `
+        <div class="sys-card p-6 rounded-2xl border sys-border grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div class="lg:col-span-8 space-y-4">
+            <div class="flex items-center gap-2">
+              <span class="bg-purple-500/20 text-purple-300 text-xs font-black px-3 py-1 rounded-full uppercase">${data.name} · Año ${data.year}</span>
+              <span class="text-xs text-slate-400">🚐 ${data.vehicle}</span>
+            </div>
+            <h3 class="text-2xl font-extrabold text-white">Bitácora Oficial del Euroviaje</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div class="bg-slate-900/80 p-3 rounded-lg border sys-border">
+                <span class="text-slate-400 block text-[10px] uppercase font-bold">Recorrido y Distancia:</span>
+                <span class="text-white font-semibold">${data.km}</span>
+              </div>
+              <div class="bg-slate-900/80 p-3 rounded-lg border sys-border">
+                <span class="text-slate-400 block text-[10px] uppercase font-bold">Países Visitados:</span>
+                <span class="text-teal-300 font-semibold">${data.itinerary}</span>
+              </div>
+            </div>
+            <div class="bg-slate-900/80 p-3 rounded-lg border sys-border text-xs">
+              <span class="text-slate-400 block text-[10px] uppercase font-bold">Plantas Industriales & Visitas Técnicas Clave:</span>
+              <span class="text-amber-300 font-semibold">${data.plants}</span>
+            </div>
+            <div class="p-4 rounded-xl bg-purple-950/30 border border-purple-500/30">
+              <p class="text-xs italic text-purple-200">"${data.quote}"</p>
+              <div class="text-[11px] font-bold text-purple-400 text-right mt-1">— ${data.authorQuote}</div>
+            </div>
+          </div>
+
+          <div class="lg:col-span-4 bg-slate-900/90 p-4 rounded-xl border sys-border flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between border-b sys-border pb-2 mb-3">
+                <span class="text-xs font-bold text-white uppercase tracking-wider">Nómina de Viajeros</span>
+                <span class="text-[10px] bg-slate-800 text-teal-300 px-2 py-0.5 rounded">${data.roster.length} Socios</span>
+              </div>
+              <ul class="space-y-1.5 text-xs text-slate-300">
+                ${data.roster.map(r => `<li class="flex items-center gap-2"><span class="text-teal-400">✔</span><span>${r}</span></li>`).join('')}
+              </ul>
+            </div>
+            <button onclick="showToast('Solicitud para sumar anécdotas o fotos enviada a Prensa')" class="mt-4 w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold py-2 rounded border sys-border transition">
+              📷 Aportar Fotos o Recuerdos
+            </button>
+          </div>
+        </div>
+      `;
     }
 
-    /* 2. Traza Resta Diferencial (Púrpura) */
-    if (chkShowDiff.checked) {
-      ctx.strokeStyle = "#a855f7";
-      ctx.lineWidth = 2.2;
-      ctx.beginPath();
-      for (let i = 0; i < muestrasPantalla; i++) {
-        let diffVal = 2048 + ((bufferA[i] - bufferB[i]) / 2);
-        let x = (i / (muestrasPantalla - 1)) * w;
-        let y = mapY(diffVal);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
+    // RESERVAS QUINCHO / SEDE
+    function toggleReservaModal() {
+      document.getElementById('reserva-form-box').classList.toggle('hidden');
     }
 
-    /* 3. Traza Canal 2 — Placa B (Amarillo - 180° Contrafase) */
-    if (chkShowB.checked && bufferB.length > 0) {
-      ctx.strokeStyle = "#facc15";
-      ctx.lineWidth = 2.4;
-      ctx.beginPath();
-      for (let i = 0; i < muestrasPantalla; i++) {
-        let x = (i / (muestrasPantalla - 1)) * w;
-        let y = mapY(bufferB[i]);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
+    function submitReserva() {
+      const space = document.getElementById('res-space').value;
+      const date = document.getElementById('res-date').value;
+      const shift = document.getElementById('res-shift').value;
+      const reason = document.getElementById('res-reason').value.trim() || 'Juntada de Camada';
+
+      const grid = document.getElementById('reservas-grid');
+      const newCard = document.createElement('div');
+      newCard.className = 'sys-card p-5 rounded-xl border border-teal-500/40 fade-in';
+      newCard.innerHTML = `
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-[10px] font-bold uppercase bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded">En Revisión OyE</span>
+          <span class="text-xs text-slate-400">${date}</span>
+        </div>
+        <h4 class="font-extrabold text-white text-sm">${reason}</h4>
+        <div class="text-xs text-slate-300 mt-1">${space} · ${shift}</div>
+        <div class="text-[11px] text-teal-400 mt-2">Solicitante: ${currentSysRole === 'activo' ? 'Lihue Napoli' : 'Ing. Martín Gómez'}</div>
+      `;
+      grid.prepend(newCard);
+      toggleReservaModal();
+      showToast('¡Solicitud de reserva enviada a Organización y Eventos (OyE)!');
     }
 
-    /* 4. Traza Canal 1 — Placa A (Cyan - 0°) */
-    if (chkShowA.checked && bufferA.length > 0) {
-      ctx.strokeStyle = "#00e5ff";
-      ctx.lineWidth = 2.4;
-      ctx.beginPath();
-      for (let i = 0; i < muestrasPantalla; i++) {
-        let x = (i / (muestrasPantalla - 1)) * w;
-        let y = mapY(bufferA[i]);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
+    // CHECKOUT DE GRAN RIFA DIGITAL
+    function openRifaCheckout(cant) {
+      const monto = cant * 30000;
+      showToast(`🎟️ Abriendo pasarela de pago para ${cant} Boleta/s ($${monto.toLocaleString('es-AR')}). Acreditación directa a Comisión Rifaria.`);
     }
 
-    requestAnimationFrame(dibujar);
-  }
+    // ONBOARDING / PASE A EXVIAJERO AUTOMÁTICO
+    function openOnboardingModal() {
+      document.getElementById('modal-onboarding').classList.remove('hidden');
+    }
+    function closeOnboardingModal() {
+      document.getElementById('modal-onboarding').classList.add('hidden');
+    }
+    function confirmOnboarding() {
+      closeOnboardingModal();
+      setSysRole('exviajero');
+      showToast('🎉 ¡Bienvenido a la comunidad de Exviajeros de AVEIT! Cuenta migrada con éxito.');
+    }
 
-  requestAnimationFrame(dibujar);
-</script>
+    // DIRECTORIO
+    const exviajerosData = [
+      { name: "Ing. Luis Del Bel", gv: "GV 20", year: "1988", esp: "Metalúrgica", city: "Córdoba, Argentina", country: "Argentina", company: "Metalúrgica Del Bel", role: "Titular / Director", phoneVisible: true, phone: "+54 9 351 555-2020", tags: ["⚙️ B2B Metalúrgico", "🏭 Visitas a Planta", "⭐ Sponsor Rifa"], helps: ["visita", "sponsor", "b2b"] },
+      { name: "Ing. Nicolás Fanin", gv: "GV 48", year: "2016", esp: "Electrónica", city: "Múnich, Alemania", country: "Alemania", company: "Siemens AG", role: "Systems Engineer", phoneVisible: false, phone: "Oculto", tags: ["🏭 Visita Euroviaje", "🇩🇪 Múnich"], helps: ["visita"] },
+      { name: "Ing. Roberto Iñiguez", gv: "GV 35", year: "2003", esp: "Industrial", city: "Córdoba, Argentina", country: "Argentina", company: "Industrias & Procesos", role: "Gerente de Operaciones", phoneVisible: true, phone: "+54 9 351 444-3535", tags: ["💼 Pasantías AVEIT", "⚙️ Proveedores"], helps: ["pasantia", "b2b"] },
+      { name: "Ing. Eduardo Picco", gv: "GV 40", year: "2008", esp: "Mecánica", city: "Turín, Italia", country: "Italia", company: "Automotive Design", role: "Lead Engineer", phoneVisible: false, phone: "Oculto", tags: ["🏭 Visitas Italia", "🇮🇹 Diseño"], helps: ["visita"] },
+      { name: "Ing. Juliana Morano", gv: "GV 52", year: "2020", esp: "Sistemas", city: "Barcelona, España", country: "España", company: "Tech Cloud", role: "Engineering Manager", phoneVisible: true, phone: "+34 611 223 344", tags: ["💼 Pasantías Remotas", "🎙️ Charlas"], helps: ["pasantia"] },
+      { name: "Ing. Lucas Castellano", gv: "GV 55", year: "2023", esp: "Electrónica", city: "Córdoba, Argentina", country: "Argentina", company: "IoT & Embebidos", role: "Ing. de Desarrollo", phoneVisible: true, phone: "+54 9 351 678-9012", tags: ["🎓 Guía 5° Año", "⭐ Sponsor"], helps: ["pasantia", "sponsor"] }
+    ];
 
+    const activosTalentosData = [
+      { name: "Lihue Ahian Napoli", gv: "G59 (5° Año)", esp: "Ing. Electrónica", skills: ["Sistemas Embebidos / PCB", "Cortadora Láser CNC propia", "Gestión RRHH"], availability: "Corte láser para proyectos o pasantía part-time." },
+      { name: "Martín Gómez", gv: "G60 (4° Año)", esp: "Ing. en Sistemas", skills: ["Desarrollo Web Full-Stack", "Python / SQL", "Automatización"], availability: "Desarrollo de software para PyMEs de exviajeros." },
+      { name: "Camila Rodríguez", gv: "G59 (5° Año)", esp: "Ing. Industrial", skills: ["Lean Manufacturing", "Power BI Avanzado", "Logística"], availability: "Buscando pasantía de 20 hs en Córdoba." },
+      { name: "Agustín Ferreyra", gv: "G61 (3° Año)", esp: "Ing. Mecánica", skills: ["SolidWorks / CAD", "Impresora 3D propia", "Mecanizado"], availability: "Prototipado rápido e impresión 3D bajo plano." }
+    ];
+
+    function setDirectoryMode(m) {
+      const isEx = m === 'exviajeros';
+      document.getElementById('dir-filters-exviajeros').classList.toggle('hidden', !isEx);
+      document.getElementById('grid-dir-exviajeros').classList.toggle('hidden', !isEx);
+      document.getElementById('grid-dir-activos').classList.toggle('hidden', isEx);
+      document.getElementById('btn-dir-exviajeros').className = isEx ? 'px-3.5 py-1.5 rounded text-xs font-extrabold bg-teal-500 text-slate-950 transition' : 'px-3.5 py-1.5 rounded text-xs font-extrabold text-slate-300 hover:text-white transition';
+      document.getElementById('btn-dir-activos').className = !isEx ? 'px-3.5 py-1.5 rounded text-xs font-extrabold bg-sky-400 text-slate-950 transition' : 'px-3.5 py-1.5 rounded text-xs font-extrabold text-slate-300 hover:text-white transition';
+    }
+
+    function renderDirectory() {
+      const q = (document.getElementById('filter-search')?.value || '').toLowerCase();
+      const gv = document.getElementById('filter-gv')?.value || 'all';
+      const esp = document.getElementById('filter-esp')?.value || 'all';
+      const pais = document.getElementById('filter-pais')?.value || 'all';
+      const help = document.getElementById('filter-help')?.value || 'all';
+
+      const filtered = exviajerosData.filter(item => {
+        const matchQ = item.name.toLowerCase().includes(q) || item.company.toLowerCase().includes(q) || item.city.toLowerCase().includes(q);
+        const matchGV = gv === 'all' || item.gv === gv;
+        const matchEsp = esp === 'all' || item.esp === esp;
+        const matchPais = pais === 'all' || item.country === pais;
+        const matchHelp = help === 'all' || item.helps.includes(help);
+        return matchQ && matchGV && matchEsp && matchPais && matchHelp;
+      });
+
+      document.getElementById('grid-dir-exviajeros').innerHTML = filtered.map(item => `
+        <div class="sys-card p-5 rounded-xl border sys-border flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-2">
+              <span class="bg-purple-500/20 text-purple-300 text-[10px] font-extrabold px-2 py-0.5 rounded">${item.gv} (${item.year})</span>
+              <span class="text-[11px] text-slate-400">📍 ${item.city}</span>
+            </div>
+            <h3 class="text-base font-extrabold text-white">${item.name}</h3>
+            <div class="text-xs font-bold text-teal-400 mt-0.5">${item.company}</div>
+            <div class="text-[11px] text-slate-400">${item.role}</div>
+            <div class="flex flex-wrap gap-1.5 mt-3">
+              ${item.tags.map(t => `<span class="bg-slate-900 text-slate-300 text-[10px] px-2 py-0.5 rounded border sys-border">${t}</span>`).join('')}
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t sys-border flex items-center justify-between">
+            <span class="text-[11px] ${item.phoneVisible ? 'text-emerald-400 font-semibold' : 'text-amber-400/90'}">
+              ${item.phoneVisible ? '📱 ' + item.phone : '🔒 Teléfono Oculto'}
+            </span>
+            <button onclick="showToast('Conectando con ${item.name}')" class="sys-teal sys-teal-hover text-white text-xs font-bold px-3 py-1.5 rounded transition">
+              ${currentSysRole === 'activo' ? 'Contactar' : 'Conectar'}
+            </button>
+          </div>
+        </div>
+      `).join('');
+
+      document.getElementById('grid-activos-cards').innerHTML = activosTalentosData.map(a => `
+        <div class="sys-card p-5 rounded-xl border border-sky-500/30 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="bg-sky-500/20 text-sky-300 text-[10px] font-extrabold px-2.5 py-0.5 rounded">${a.gv}</span>
+              <span class="text-xs font-bold text-teal-300">${a.esp}</span>
+            </div>
+            <h4 class="text-base font-extrabold text-white">${a.name}</h4>
+            <p class="text-xs text-slate-300 mt-1">${a.availability}</p>
+            <div class="flex flex-wrap gap-1.5 mt-3">
+              ${a.skills.map(s => `<span class="bg-slate-900 text-sky-300 text-[11px] px-2.5 py-1 rounded border border-sky-500/30">⚡ ${s}</span>`).join('')}
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t sys-border flex justify-end">
+            <button onclick="showToast('Mensaje enviado a ${a.name}')" class="bg-sky-500 hover:bg-sky-400 text-slate-950 font-extrabold text-xs px-3.5 py-1.5 rounded transition">
+              Contactar Socio
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // BOLSA Y SERVICIOS
+    let bolsaPosts = [
+      { category: "Servicio / Herramienta Propia", title: "Cortadora Láser CNC e Impresión 3D para Proyectos o Eventos", author: "Lihue Ahian Napoli (Socio Activo G59)", audience: "Toda la Comunidad", validity: "Tiempo Indeterminado", desc: "Disponible para prototipos, maquetas o cartelería para eventos de la Asociación." },
+      { category: "Pasantía / Empleo", title: "Pasante de Ingeniería Industrial o Mecánica (20 hs)", author: "Ing. Roberto Iñiguez (Exviajero GV35)", audience: "Solo Socios Activos", validity: "Hasta 30/11/2026", desc: "Mejora continua en planta Córdoba. Horarios flexibles UTN." },
+      { category: "Proveedor Industrial B2B", title: "Búsqueda: Mecanizado CNC y Armado de Tableros", author: "Ing. Luis Del Bel (Exviajero GV20)", audience: "Toda la Comunidad", validity: "Hasta 15/12/2026", desc: "Cotización de piezas bajo plano. Preferencia a talleres de AVEIT." }
+    ];
+
+    function togglePublishModal() { document.getElementById('bolsa-publish-box').classList.toggle('hidden'); }
+    function toggleIndefiniteDate() {
+      const isInd = document.getElementById('pub-indefinite').checked;
+      document.getElementById('pub-end').disabled = isInd;
+      document.getElementById('pub-end').classList.toggle('opacity-40', isInd);
+    }
+    function addNewPost() {
+      const title = document.getElementById('pub-title').value.trim();
+      if (!title) { showToast('Ingresá un título'); return; }
+      bolsaPosts.unshift({
+        category: document.getElementById('pub-category').value,
+        title: title,
+        author: currentSysRole === 'activo' ? 'Lihue Napoli (G59)' : 'Ing. Martín Gómez (GV50)',
+        audience: document.getElementById('pub-audience').value,
+        validity: document.getElementById('pub-indefinite').checked ? 'Tiempo Indeterminado' : 'Vigencia configurada',
+        desc: document.getElementById('pub-desc').value.trim() || 'Sin descripción adicional.'
+      });
+      togglePublishModal();
+      renderBolsa();
+      showToast('Publicación agregada con éxito');
+    }
+
+    function renderBolsa() {
+      document.getElementById('bolsa-list').innerHTML = bolsaPosts.map(p => `
+        <div class="sys-card p-5 rounded-xl border sys-border flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="space-y-1">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-300">${p.category}</span>
+              <span class="text-[10px] text-teal-300 bg-slate-900 px-2 py-0.5 rounded">Para: ${p.audience}</span>
+              <span class="text-[10px] text-slate-400">⏳ ${p.validity}</span>
+            </div>
+            <h3 class="text-base font-extrabold text-white">${p.title}</h3>
+            <div class="text-xs text-teal-400 font-semibold">${p.author}</div>
+            <p class="text-xs text-slate-300 max-w-3xl">${p.desc}</p>
+          </div>
+          <button onclick="showToast('Solicitud enviada a ${p.author}')" class="sys-teal sys-teal-hover text-white font-extrabold text-xs px-4 py-2.5 rounded-lg whitespace-nowrap">
+            ${currentSysRole === 'activo' ? 'Postularme / Solicitar' : 'Contactar'}
+          </button>
+        </div>
+      `).join('');
+    }
+
+    // SPONSORS
+    function selectSponsorPlan(p) {
+      document.getElementById('sp-plan').value = p;
+      document.getElementById('sp-company').focus();
+      showToast(`Plan seleccionado: ${p}`);
+    }
+    function submitSponsorRequest() {
+      const c = document.getElementById('sp-company').value.trim() || 'Mi Empresa';
+      showToast(`Propuesta de ${c} enviada a Comisión Rifaria y RRII`);
+      document.getElementById('sp-company').value = '';
+    }
+
+    // EVENTOS
+    const eventosAveit = [
+      { type: "Institucional", badge: "Campaña de Socios", title: "Dar Charlas en Aulas a Ingresantes", date: "Mayo / Agosto", organizer: "RRHH & Prensa", desc: "Contale a los ingresantes cómo es el camino de 6 años y el viaje." },
+      { type: "Social", badge: "Reencuentro", title: "Asado General de Exviajeros", date: "Domingo Mediodía", organizer: "OyE & Exviajeros", desc: "El tradicional almuerzo para todas las camadas en la Sede." },
+      { type: "Institucional", badge: "Solidario", title: "Maratón Solidaria UTN AVEIT", date: "Primavera", organizer: "GSA & Cómputos", desc: "Corré con tu grupo o sumá a tu empresa como sponsor del evento." }
+    ];
+
+    let currentEventFilter = 'all';
+    function filterEvents(t) { currentEventFilter = t; renderEventos(); }
+    function renderEventos() {
+      const f = currentEventFilter === 'all' ? eventosAveit : eventosAveit.filter(e => e.type === currentEventFilter);
+      document.getElementById('eventos-grid').innerHTML = f.map(ev => `
+        <div class="sys-card p-5 rounded-xl border sys-border flex flex-col justify-between">
+          <div>
+            <span class="text-[10px] font-extrabold uppercase bg-teal-500/20 text-teal-300 px-2.5 py-0.5 rounded">${ev.badge}</span>
+            <h3 class="text-base font-extrabold text-white mt-2">${ev.title}</h3>
+            <div class="text-xs text-sky-300 font-semibold mt-1">📅 ${ev.date}</div>
+            <p class="text-xs text-slate-300 mt-2">${ev.desc}</p>
+          </div>
+          <button onclick="showToast('Inscripción registrada para ${ev.title}')" class="mt-4 w-full sys-teal sys-teal-hover text-white text-xs font-bold py-2 rounded uppercase">
+            Sumarme
+          </button>
+        </div>
+      `).join('');
+    }
+
+    // PRIVACIDAD
+    function toggleMyPhoneVisibility() {
+      const ch = document.getElementById('switch-phone-optin').checked;
+      showToast(ch ? 'Teléfono visible para socios logueados' : 'Teléfono oculto por defecto');
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.classList.remove('hidden');
+      clearTimeout(window.toastTimer);
+      window.toastTimer = setTimeout(() => t.classList.add('hidden'), 3500);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      renderDirectory();
+      renderBolsa();
+      renderEventos();
+      renderCapsula();
+      drawMap();
+    });
+  </script>
 </body>
 </html>
